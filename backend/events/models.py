@@ -4,11 +4,18 @@ from django.db import models
 
 
 class Event(models.Model):
-    owner = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
+    calendar = models.ForeignKey(
+        "calendars.Calendar",
         on_delete=models.CASCADE,
         related_name="events",
+        null=True,
+        blank=True,
     )
+    created_by = models.ForeignKey(
+    settings.AUTH_USER_MODEL,
+    on_delete=models.CASCADE,
+    related_name="created_events",
+)
     title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     location = models.CharField(max_length=255, blank=True)

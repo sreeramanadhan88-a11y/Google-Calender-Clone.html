@@ -2,16 +2,20 @@
 from rest_framework import serializers
 
 from .models import Event
+from calendars.models import Calendar
 
 
 class EventSerializer(serializers.ModelSerializer):
-    owner = serializers.ReadOnlyField(source="owner.username")
+    created_by = serializers.ReadOnlyField(source="created_by.username")
+    calendar_name = serializers.ReadOnlyField(source="calendar.name")
 
     class Meta:
         model = Event
         fields = [
             "id",
-            "owner",
+            "calendar",
+            "calendar_name",
+            "created_by",
             "title",
             "description",
             "location",
@@ -22,7 +26,20 @@ class EventSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
-        read_only_fields = ["id", "owner", "created_at", "updated_at"]
+        read_only_fields = [
+            "id",
+            "created_by",
+            "calendar_name",
+            "created_at",
+            "updated_at",
+        ]
+
+    def validate_calendar(self, value):
+        if value and value.owner != self.context["request"].user:
+            raise serializers.ValidationError(
+                "You can only assign events to your own calendars."
+            )
+        return value
 
     def validate(self, data):
         start_time = data.get(

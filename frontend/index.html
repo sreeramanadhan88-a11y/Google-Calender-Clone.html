@@ -1,0 +1,150 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Calendar Clone</title>
+
+    <!-- CSS -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- JavaScript -->
+    <script src="script.js" defer></script>
+</head>
+<body>
+
+    <!-- Main Application -->
+    <div class="calendar-app">
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <button id="menuBtn" aria-label="Toggle sidebar">☰</button>
+                <h1>Calendar</h1>
+            </div>
+
+            <div class="header-center">
+                <button id="todayBtn">Today</button>
+                <button id="prevBtn" aria-label="Previous period">‹</button>
+                <button id="nextBtn" aria-label="Next period">›</button>
+                <h2 id="currentDate"></h2>
+            </div>
+
+            <div class="header-right">
+                <select id="viewSelect" aria-label="Calendar view">
+                    <option value="month">Month</option>
+                    <option value="week">Week</option>
+                    <option value="day">Day</option>
+                    <option value="agenda">Agenda</option>
+                </select>
+
+                <button id="loginBtn">Login</button>
+                <button id="logoutBtn" hidden>Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+
+            <!-- Sidebar -->
+            <aside class="sidebar" id="sidebar">
+                <button id="createEventBtn" class="create-event-btn">
+                    + Create
+                </button>
+
+                <section class="mini-calendar-section">
+                    <h3>Mini Calendar</h3>
+                    <div id="miniCalendar"></div>
+                </section>
+
+                <section class="my-calendars">
+                    <h3>My Calendars</h3>
+                    <div id="calendarList"></div>
+                </section>
+            </aside>
+
+            <!-- Calendar Workspace -->
+            <main class="calendar-workspace">
+
+                <!-- Search -->
+                <div class="search-bar">
+                    <input
+                        type="search"
+                        id="searchInput"
+                        placeholder="Search events"
+                        aria-label="Search events"
+                    >
+                    <button id="searchBtn">Search</button>
+                </div>
+
+                <!-- Calendar Grid -->
+                <section
+                    id="calendarContainer"
+                    class="calendar-container"
+                    aria-label="Calendar events"
+                >
+                    <!-- Calendar view will be rendered using JavaScript -->
+                </section>
+
+            </main>
+        </div>
+
+    </div>
+
+    <!-- Event Form Dialog -->
+    <dialog id="eventDialog">
+        <form id="eventForm">
+            <h2 id="eventDialogTitle">Create Event</h2>
+
+            <label for="eventTitle">Event title</label>
+            <input type="text" id="eventTitle" required>
+
+            <label for="eventDescription">Description</label>
+            <textarea id="eventDescription"></textarea>
+
+            <label for="eventStart">Start</label>
+            <input type="datetime-local" id="eventStart" required>
+
+            <label for="eventEnd">End</label>
+            <input type="datetime-local" id="eventEnd" required>
+
+            <label for="eventCalendar">Calendar</label>
+            <select id="eventCalendar">
+                <option value="">Default calendar</option>
+            </select>
+
+            <div class="dialog-actions">
+                <button type="button" id="cancelEventBtn">Cancel</button>
+                <button type="submit" id="saveEventBtn">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Login Dialog -->
+    <dialog id="loginDialog">
+        <form id="loginForm">
+            <h2>Login</h2>
+
+            <label for="username">Username</label>
+            <input type="text" id="username" autocomplete="username" required>
+
+            <label for="password">Password</label>
+            <input
+                type="password"
+                id="password"
+                autocomplete="current-password"
+                required
+            >
+
+            <p id="loginMessage" role="status"></p>
+
+            <div class="dialog-actions">
+                <button type="button" id="cancelLoginBtn">Cancel</button>
+                <button type="submit">Login</button>
+            </div>
+        </form>
+    </dialog>
+
+</body>
+</html>
