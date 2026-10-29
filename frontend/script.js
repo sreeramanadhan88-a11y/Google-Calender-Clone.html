@@ -1,4 +1,3 @@
-
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
 // ---------- API Configuration ----------
@@ -25,7 +24,12 @@ async function apiRequest(endpoint, options = {}) {
     });
 
     if (!response.ok) {
-        const message = await response.text();
+        let message = "";
+        try {
+            message = await response.text();
+        } catch (e) {
+            message = response.statusText;
+        }
         throw new Error(`API error (${response.status}): ${message}`);
     }
 
@@ -49,7 +53,10 @@ const menuBtn = document.getElementById("menuBtn");
 const sidebar = document.getElementById("sidebar");
 
 const calendarList = document.getElementById("calendarList");
+const eventCalendar = document.getElementById("eventCalendar");
 
+// Authentication elements
+const authButtons = document.getElementById("authButtons");
 const loginBtn = document.getElementById("loginBtn");
 const logoutBtn = document.getElementById("logoutBtn");
 
@@ -57,6 +64,30 @@ const loginDialog = document.getElementById("loginDialog");
 const loginForm = document.getElementById("loginForm");
 const cancelLoginBtn = document.getElementById("cancelLoginBtn");
 const loginMessage = document.getElementById("loginMessage");
+
+// Profile elements
+const profileContainer = document.getElementById("profileContainer");
+const profileBtn = document.getElementById("profileBtn");
+const profileMenu = document.getElementById("profileMenu");
+const profileInitial = document.getElementById("profileInitial");
+const profileName = document.getElementById("profileName");
+const profileEmail = document.getElementById("profileEmail");
+const profileLogoutBtn = document.getElementById("profileLogoutBtn");
+
+// Registration elements
+const registerBtn = document.getElementById("registerBtn");
+const registerDialog = document.getElementById("registerDialog");
+const registerForm = document.getElementById("registerForm");
+const cancelRegisterBtn = document.getElementById("cancelRegisterBtn");
+const showRegisterFromLogin = document.getElementById("showRegisterFromLogin");
+const showLoginFromRegister = document.getElementById("showLoginFromRegister");
+const registerMessage = document.getElementById("registerMessage");
+
+// Event Dialog elements
+const createEventBtn = document.getElementById("createEventBtn");
+const eventDialog = document.getElementById("eventDialog");
+const eventForm = document.getElementById("eventForm");
+const cancelEventBtn = document.getElementById("cancelEventBtn");
 
 // ---------- Calendar State ----------
 
@@ -178,7 +209,6 @@ function renderMonthView() {
     html += `</div>`;
     calendarContainer.innerHTML = html;
 
-    // Display events in their corresponding month dates.
     renderEventsForSelector(".calendar-day");
 }
 
@@ -220,7 +250,6 @@ function renderWeekView() {
     html += `</div>`;
     calendarContainer.innerHTML = html;
 
-    // Display events in their corresponding week dates.
     renderEventsForSelector(".week-day");
 }
 
@@ -328,37 +357,26 @@ function changePeriod(amount) {
     renderCalendar();
 }
 
-prevBtn.addEventListener("click", () => {
-    changePeriod(-1);
-});
-
-nextBtn.addEventListener("click", () => {
-    changePeriod(1);
-});
-
+prevBtn.addEventListener("click", () => changePeriod(-1));
+nextBtn.addEventListener("click", () => changePeriod(1));
 todayBtn.addEventListener("click", () => {
     selectedDate = new Date();
     renderCalendar();
 });
-
-viewSelect.addEventListener("change", () => {
-    renderCalendar();
-});
-
-// ---------- Sidebar Toggle ----------
-
-menuBtn.addEventListener("click", () => {
-    sidebar.classList.toggle("sidebar-hidden");
-});
+viewSelect.addEventListener("change", () => renderCalendar());
+menuBtn.addEventListener("click", () => sidebar.classList.toggle("sidebar-hidden"));
 
 // ---------- Load User Calendars ----------
 
 async function loadCalendars() {
+    if (!calendarList) return;
     calendarList.textContent = "Loading calendars...";
 
     if (!getAccessToken()) {
-        calendarList.textContent =
-            "Please log in to view your calendars.";
+        calendarList.textContent = "Please log in to view your calendars.";
+        if (eventCalendar) {
+            eventCalendar.innerHTML = '<option value="">Select a calendar</option>';
+        }
         return;
     }
 
@@ -366,11 +384,16 @@ async function loadCalendars() {
         const calendars = await apiRequest("/calendars/");
 
         calendarList.innerHTML = "";
+        if (eventCalendar) {
+            eventCalendar.innerHTML = '<option value="">Select a calendar</option>';
+        }
 
         if (!Array.isArray(calendars) || calendars.length === 0) {
             calendarList.textContent = "No calendars found.";
             return;
         }
+
+        let defaultCalendarId = null;
 
         calendars.forEach(calendar => {
             const item = document.createElement("div");
@@ -381,16 +404,32 @@ async function loadCalendars() {
 
             if (calendar.is_default) {
                 name.textContent += " (Default)";
+                defaultCalendarId = calendar.id;
             }
 
             item.appendChild(name);
             calendarList.appendChild(item);
+
+            if (eventCalendar) {
+                const option = document.createElement("option");
+                option.value = calendar.id;
+                option.textContent = calendar.is_default
+                    ? `${calendar.name} (Default)`
+                    : calendar.name;
+
+                eventCalendar.appendChild(option);
+            }
         });
+
+        if (eventCalendar && defaultCalendarId) {
+            eventCalendar.value = String(defaultCalendarId);
+        }
     } catch (error) {
         console.error("Failed to load calendars:", error);
-
-        calendarList.textContent =
-            "Could not load calendars. Check your login and server.";
+        calendarList.textContent = "Could not load calendars. Check your login and server.";
+        if (eventCalendar) {
+            eventCalendar.innerHTML = '<option value="">Select a calendar</option>';
+        }
     }
 }
 
@@ -405,10 +444,7 @@ async function loadEvents() {
 
     try {
         const data = await apiRequest("/events/");
-
         events = Array.isArray(data) ? data : [];
-
-        console.log("Events loaded:", events);
     } catch (error) {
         console.error("Failed to load events:", error);
         events = [];
@@ -417,14 +453,123 @@ async function loadEvents() {
     renderCalendar();
 }
 
+// ---------- Registration Dialog Handlers ----------
+
+registerBtn.addEventListener("click", () => {
+    registerMessage.textContent = "";
+    registerDialog.showModal();
+});
+
+cancelRegisterBtn.addEventListener("click", () => {
+    registerDialog.close();
+});
+
+showRegisterFromLogin.addEventListener("click", () => {
+    loginDialog.close();
+    registerMessage.textContent = "";
+    registerDialog.showModal();
+});
+
+showLoginFromRegister.addEventListener("click", () => {
+    registerDialog.close();
+    loginMessage.textContent = "";
+    loginDialog.showModal();
+});
+
+registerForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const username = document.getElementById("registerUsername").value.trim();
+    const email = document.getElementById("registerEmail").value.trim();
+    const password = document.getElementById("registerPassword").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+
+    registerMessage.textContent = "";
+
+    if (password !== confirmPassword) {
+        registerMessage.textContent = "Passwords do not match.";
+        return;
+    }
+
+    registerMessage.textContent = "Creating account...";
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/accounts/register/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ username, email, password })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            const errors = Object.values(data).flat().join(" ");
+            throw new Error(errors || "Registration failed.");
+        }
+
+        registerMessage.textContent = "Account created successfully! Please log in.";
+        registerForm.reset();
+        
+        // Close register dialog and open login dialog smoothly
+        setTimeout(() => {
+            registerDialog.close();
+            loginMessage.textContent = "Account created! Please log in with your credentials.";
+            loginDialog.showModal();
+        }, 1000);
+
+    } catch (error) {
+        registerMessage.textContent = error.message;
+    }
+});
+
 // ---------- Authentication UI ----------
 
 function updateAuthUI() {
     const isLoggedIn = Boolean(getAccessToken());
 
-    loginBtn.hidden = isLoggedIn;
-    logoutBtn.hidden = !isLoggedIn;
+    authButtons.hidden = isLoggedIn;
+    profileContainer.hidden = !isLoggedIn;
+    logoutBtn.hidden = true;
+
+    if (!isLoggedIn) {
+        profileName.textContent = "User";
+        profileEmail.textContent = "";
+        profileInitial.textContent = "U";
+        profileMenu.hidden = true;
+        profileBtn.setAttribute("aria-expanded", "false");
+    }
 }
+
+async function loadUserProfile() {
+    if (!getAccessToken()) return;
+
+    try {
+        const user = await apiRequest("/accounts/me/");
+        const username = user.username || user.name || "User";
+
+        profileName.textContent = username;
+        profileEmail.textContent = user.email || "";
+        profileInitial.textContent = username.charAt(0).toUpperCase();
+    } catch (error) {
+        console.error("Failed to load user profile:", error);
+        profileName.textContent = "User";
+        profileEmail.textContent = "";
+        profileInitial.textContent = "U";
+    }
+}
+
+profileBtn.addEventListener("click", () => {
+    const isOpening = profileMenu.hidden;
+    profileMenu.hidden = !isOpening;
+    profileBtn.setAttribute("aria-expanded", String(isOpening));
+});
+
+document.addEventListener("click", event => {
+    if (!profileContainer.contains(event.target) && !profileMenu.hidden) {
+        profileMenu.hidden = true;
+        profileBtn.setAttribute("aria-expanded", "false");
+    }
+});
 
 loginBtn.addEventListener("click", () => {
     loginMessage.textContent = "";
@@ -440,20 +585,15 @@ cancelLoginBtn.addEventListener("click", () => {
 loginForm.addEventListener("submit", async event => {
     event.preventDefault();
 
-    const username =
-        document.getElementById("username").value.trim();
-
-    const password =
-        document.getElementById("password").value;
+    const username = document.getElementById("username").value.trim();
+    const password = document.getElementById("password").value;
 
     loginMessage.textContent = "Logging in...";
 
     try {
         const response = await fetch(`${API_BASE_URL}/token/`, {
             method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ username, password })
         });
 
@@ -462,7 +602,6 @@ loginForm.addEventListener("submit", async event => {
         }
 
         const tokens = await response.json();
-
         sessionStorage.setItem("access_token", tokens.access);
 
         if (tokens.refresh) {
@@ -473,7 +612,7 @@ loginForm.addEventListener("submit", async event => {
         loginForm.reset();
 
         updateAuthUI();
-
+        await loadUserProfile(); // Populates profile name & initial immediately
         await loadCalendars();
         await loadEvents();
 
@@ -485,20 +624,134 @@ loginForm.addEventListener("submit", async event => {
 
 // ---------- Logout ----------
 
-logoutBtn.addEventListener("click", async () => {
+async function logoutUser() {
     sessionStorage.removeItem("access_token");
     sessionStorage.removeItem("refresh_token");
 
     events = [];
-
     updateAuthUI();
     await loadCalendars();
     renderCalendar();
+}
+
+profileLogoutBtn.addEventListener("click", logoutUser);
+logoutBtn.addEventListener("click", logoutUser);
+
+// ---------- Create Event Dialog & Form ----------
+
+createEventBtn.addEventListener("click", () => {
+    if (!getAccessToken()) {
+        alert("Please log in before creating an event.");
+        loginMessage.textContent = "";
+        loginDialog.showModal();
+        return;
+    }
+
+    eventForm.reset();
+
+    const start = new Date();
+    start.setMinutes(0, 0, 0);
+
+    const end = new Date(start);
+    end.setHours(end.getHours() + 1);
+
+    const toLocalDateTime = (date) => {
+        const offset = date.getTimezoneOffset();
+        return new Date(date.getTime() - offset * 60000)
+            .toISOString()
+            .slice(0, 16);
+    };
+
+    document.getElementById("eventStart").value = toLocalDateTime(start);
+    document.getElementById("eventEnd").value = toLocalDateTime(end);
+
+    eventDialog.showModal();
+});
+
+cancelEventBtn.addEventListener("click", () => {
+    eventDialog.close();
+});
+
+eventForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const title = document.getElementById("eventTitle").value.trim();
+    const description = document.getElementById("eventDescription").value.trim();
+    const startTime = document.getElementById("eventStart").value;
+    const endTime = document.getElementById("eventEnd").value;
+    const calendarId = eventCalendar.value;
+
+    if (!title || !startTime || !endTime || !calendarId) {
+        alert("Please fill in the title, start time, end time, and calendar.");
+        return;
+    }
+
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    if (end <= start) {
+        alert("End time must be after start time.");
+        return;
+    }
+
+    try {
+        await apiRequest("/events/", {
+            method: "POST",
+            body: JSON.stringify({
+                title: title,
+                description: description,
+                start_time: start.toISOString(),
+                end_time: end.toISOString(),
+                calendar: Number(calendarId)
+            })
+        });
+
+        eventDialog.close();
+        eventForm.reset();
+        await loadEvents();
+        alert("Event created successfully!");
+    } catch (error) {
+        console.error("Error creating event:", error);
+        alert(`Something went wrong while saving the event: ${error.message}`);
+    }
 });
 
 // ---------- Initial Setup ----------
 
 updateAuthUI();
+if (getAccessToken()) {
+    loadUserProfile();
+}
 renderCalendar();
 loadCalendars();
 loadEvents();
+
+// ---------- Dark Theme Toggle ----------
+
+const themeToggleBtn = document.getElementById("themeToggleBtn");
+
+// Check for saved user preference on load
+const savedTheme = localStorage.getItem("theme");
+if (savedTheme) {
+    document.documentElement.setAttribute("data-theme", savedTheme);
+    if (themeToggleBtn) {
+        themeToggleBtn.textContent = savedTheme === "dark" ? "☀️" : "🌙";
+    }
+}
+
+if (themeToggleBtn) {
+    themeToggleBtn.addEventListener("click", () => {
+        const currentTheme = document.documentElement.getAttribute("data-theme");
+        const newTheme = currentTheme === "dark" ? "light" : "dark";
+
+        if (newTheme === "dark") {
+            document.documentElement.setAttribute("data-theme", "dark");
+            localStorage.setItem("theme", "dark");
+            themeToggleBtn.textContent = "☀️";
+        } else {
+            document.documentElement.removeAttribute("data-theme");
+            localStorage.setItem("theme", "light");
+            themeToggleBtn.textContent = "🌙";
+        }
+    });
+}

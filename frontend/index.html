@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,10 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Google Calendar Clone</title>
 
-    <!-- CSS -->
     <link rel="stylesheet" href="style.css">
-
-    <!-- JavaScript -->
     <script src="script.js" defer></script>
 </head>
 <body>
@@ -32,6 +28,9 @@
             </div>
 
             <div class="header-right">
+                <!-- Theme Toggle Button Added Here -->
+                <button id="themeToggleBtn" aria-label="Toggle dark mode" title="Toggle theme">🌙</button>
+
                 <select id="viewSelect" aria-label="Calendar view">
                     <option value="month">Month</option>
                     <option value="week">Week</option>
@@ -39,7 +38,29 @@
                     <option value="agenda">Agenda</option>
                 </select>
 
-                <button id="loginBtn">Login</button>
+                <div id="authButtons">
+                    <button id="registerBtn">Register</button>
+                    <button id="loginBtn">Login</button>
+                </div>
+
+                <div class="profile-container" id="profileContainer" hidden>
+                    <button
+                        id="profileBtn"
+                        class="profile-btn"
+                        type="button"
+                        aria-label="Open profile menu"
+                        aria-expanded="false"
+                    >
+                        <span id="profileInitial">U</span>
+                    </button>
+
+                    <div class="profile-menu" id="profileMenu" hidden>
+                        <p id="profileName">User</p>
+                        <p id="profileEmail"></p>
+                        <button id="profileLogoutBtn" type="button">Logout</button>
+                    </div>
+                </div>
+
                 <button id="logoutBtn" hidden>Logout</button>
             </div>
         </header>
@@ -67,7 +88,6 @@
             <!-- Calendar Workspace -->
             <main class="calendar-workspace">
 
-                <!-- Search -->
                 <div class="search-bar">
                     <input
                         type="search"
@@ -78,18 +98,16 @@
                     <button id="searchBtn">Search</button>
                 </div>
 
-                <!-- Calendar Grid -->
                 <section
                     id="calendarContainer"
                     class="calendar-container"
                     aria-label="Calendar events"
                 >
-                    <!-- Calendar view will be rendered using JavaScript -->
+                    <!-- Calendar view rendered using JavaScript -->
                 </section>
 
             </main>
         </div>
-
     </div>
 
     <!-- Event Form Dialog -->
@@ -127,7 +145,12 @@
             <h2>Login</h2>
 
             <label for="username">Username</label>
-            <input type="text" id="username" autocomplete="username" required>
+            <input
+                type="text"
+                id="username"
+                autocomplete="username"
+                required
+            >
 
             <label for="password">Password</label>
             <input
@@ -139,9 +162,71 @@
 
             <p id="loginMessage" role="status"></p>
 
+            <p>
+                Don't have an account?
+                <button type="button" id="showRegisterFromLogin">
+                    Register
+                </button>
+            </p>
+
             <div class="dialog-actions">
                 <button type="button" id="cancelLoginBtn">Cancel</button>
                 <button type="submit">Login</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Registration Dialog -->
+    <dialog id="registerDialog">
+        <form id="registerForm">
+            <h2>Create an Account</h2>
+
+            <label for="registerUsername">Username</label>
+            <input
+                type="text"
+                id="registerUsername"
+                autocomplete="username"
+                required
+            >
+
+            <label for="registerEmail">Email</label>
+            <input
+                type="email"
+                id="registerEmail"
+                autocomplete="email"
+                required
+            >
+
+            <label for="registerPassword">Password</label>
+            <input
+                type="password"
+                id="registerPassword"
+                autocomplete="new-password"
+                required
+            >
+
+            <label for="confirmPassword">Confirm password</label>
+            <input
+                type="password"
+                id="confirmPassword"
+                autocomplete="new-password"
+                required
+            >
+
+            <p id="registerMessage" role="status"></p>
+
+            <p>
+                Already have an account?
+                <button type="button" id="showLoginFromRegister">
+                    Login
+                </button>
+            </p>
+
+            <div class="dialog-actions">
+                <button type="button" id="cancelRegisterBtn">Cancel</button>
+                <button type="submit" id="submitRegisterBtn">
+                    Register
+                </button>
             </div>
         </form>
     </dialog>
