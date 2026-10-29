@@ -1,4 +1,4 @@
-/* =========================================
+/* /* =========================================
    GOOGLE CALENDAR CLONE — MODERN UI
    ========================================= */
 
@@ -637,3 +637,135 @@ dialog textarea {
         padding: 12px;
     }
 }
+
+/* Upcoming events heading */
+.upcoming-events-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 4px;
+    font-size: 14px;
+    color: #202124;
+}
+
+.upcoming-heading-text {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.notification-icon {
+    font-size: 17px;
+}
+
+.upcoming-count {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: #d93025;
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    box-sizing: border-box;
+}
+
+.upcoming-subtitle {
+    margin: 0 0 12px;
+    color: #70757a;
+    font-size: 12px;
+}
+
+/* Highlight upcoming events */
+#upcomingEvents {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.upcoming-event-item {
+    padding: 11px;
+    border: 1px solid #d2e3fc;
+    border-left: 4px solid #1a73e8;
+    border-radius: 8px;
+    background: #f1f6ff;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.upcoming-event-item:hover {
+    background: #e8f0fe;
+    transform: translateY(-1px);
+}
+
+.upcoming-event-title {
+    margin-bottom: 5px;
+    color: #174ea6;
+    font-size: 13px;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+}
+
+.upcoming-event-time {
+    color: #5f6368;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.upcoming-empty {
+    margin: 0;
+    color: #70757a;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Event Details Dialog */
+#eventDetailsDialog {
+    width: min(440px, calc(100% - 32px));
+    max-width: 440px;
+    border: none;
+    border-radius: 14px;
+    padding: 24px;
+    box-sizing: border-box;
+}
+
+#eventDetailsDialog::backdrop {
+    background: rgba(0, 0, 0, 0.45);
+}
+
+.event-details-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+}
+
+.event-detail-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 14px;
+}
+
+.event-detail-row strong {
+    flex-shrink: 0;
+}
+
+.event-detail-row span {
+    text-align: right;
+    overflow-wrap: anywhere;
+}
+
+.event-detail-description {
+    margin-top: 18px;
+}
+
+.event-detail-description p {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+#closeEventDetailsBtn {
+    cursor: pointer;
+} */
