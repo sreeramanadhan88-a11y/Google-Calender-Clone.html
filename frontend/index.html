@@ -63,7 +63,7 @@
             --event-blue-bg: #d3e3fd;
         }
 
-        [data-theme="dark"] {
+        [data-theme="dark"], .dark {
             color-scheme: dark;
             --primary: #a8c7fa;
             --primary-hover: #d3e3fd;
@@ -104,7 +104,7 @@
             text-align: center;
             background: var(--background);
             color: var(--muted);
-            font-size: 11px;
+            font-size: 16px;
             font-weight: 700;
             letter-spacing: 0.7px;
             text-transform: uppercase;
@@ -145,8 +145,8 @@
             justify-content: center;
             color: var(--text);
             border-radius: 50%;
-            font-size: 13px;
-            font-weight: 500;
+            font-size: 18px;
+            font-weight: 600;
             margin-bottom: 4px;
         }
 
@@ -210,7 +210,7 @@
                     <option value="month">Month</option>
                     <option value="week">Week</option>
                     <option value="day">Day</option>
-                    <option value="agenda">Agenda</option>
+                    <!-- <option value="agenda">Agenda</option> -->
                 </select>
 
                 <div id="authButtons" class="flex items-center gap-2">
@@ -249,10 +249,10 @@
                     + Create
                 </button>
 
-                <section class="mini-calendar-section mb-6">
+                <!-- <section class="mini-calendar-section mb-6">
                     <h3 class="mb-3 pl-1 text-muted text-xs font-bold tracking-[0.8px] uppercase">Mini Calendar</h3>
                     <div id="miniCalendar" class="text-sm"></div>
-                </section>
+                </section> -->
 
                 <section class="my-calendars mb-6">
                     <h3 class="mb-3 pl-1 text-muted text-xs font-bold tracking-[0.8px] uppercase">My Calendars</h3>
@@ -282,6 +282,7 @@
             <!-- Calendar Workspace -->
             <main class="calendar-workspace flex-1 min-w-0 p-3 md:p-6 flex flex-col bg-[var(--background)]">
                 <div class="search-bar flex items-center gap-2 mb-4">
+                <div id="searchResults" class="hidden mt-4 space-y-2"></div>
                     <input
                         type="search"
                         id="searchInput"
@@ -414,6 +415,21 @@
                 <option value="task">Task</option>
                 <option value="appointment">Appointment</option>
             </select>
+            
+            <div class="mt-4">
+                <label for="eventCalendar" class="block mb-2 text-sm font-medium">
+                    Calendar
+                </label>
+
+                <select
+                    id="eventCalendar"
+                    name="calendar"
+                    required
+                    class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                >
+                    <option value="">Select a calendar</option>
+                </select>
+            </div>
 
             <label for="eventTitle" class="text-muted text-xs font-semibold">Title</label>
             <input
@@ -433,10 +449,10 @@
                     <input type="time" id="eventStartTime" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
                 </div>
 
-                <div>
+                <!-- <div>
                     <label for="eventEndTime" class="text-muted text-xs font-semibold block mb-1">End Time</label>
-                    <input type="time" id="eventEndTime" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
-                </div>
+                    <!-- <input type="time" id="eventEndTime" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"> -->
+                </div> 
             </div>
 
             <label for="eventDescription" class="text-muted text-xs font-semibold mt-1">Description</label>
@@ -451,50 +467,50 @@
 
     <!-- Event Details Dialog -->
     <dialog id="eventDetailsDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-6 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
-    <div class="event-details-content">
-        <h2 class="text-[22px] font-semibold mb-5">Event Details</h2>
+        <div class="event-details-content">
+            <h2 class="text-[22px] font-semibold mb-5">Event Details</h2>
 
-        <div class="event-detail-row flex justify-between gap-4 mb-3.5">
-            <strong class="shrink-0 text-muted text-sm">Title</strong>
-            <span id="detailTitle" class="text-right font-medium break-words"></span>
-        </div>
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">Title</strong>
+                <span id="detailTitle" class="text-right font-medium break-words"></span>
+            </div>
 
-        <div class="event-detail-row flex justify-between gap-4 mb-3.5">
-            <strong class="shrink-0 text-muted text-sm">Type</strong>
-            <span id="detailType" class="text-right font-medium break-words"></span>
-        </div>
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">Type</strong>
+                <span id="detailType" class="text-right font-medium break-words"></span>
+            </div>
 
-        <div class="event-detail-row flex justify-between gap-4 mb-3.5">
-            <strong class="shrink-0 text-muted text-sm">Date</strong>
-            <span id="detailDate" class="text-right font-medium break-words"></span>
-        </div>
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">Date</strong>
+                <span id="detailDate" class="text-right font-medium gap-4 mb-3.5 break-words"></span>
+            </div>
 
-        <div class="event-detail-row flex justify-between gap-4 mb-3.5">
-            <strong class="shrink-0 text-muted text-sm">Start Time</strong>
-            <span id="detailStart" class="text-right font-medium break-words"></span>
-        </div>
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">Start Time</strong>
+                <span id="detailStart" class="text-right font-medium break-words"></span>
+            </div>
 
-        <div class="event-detail-row flex justify-between gap-4 mb-3.5">
-            <strong class="shrink-0 text-muted text-sm">End Time</strong>
-            <span id="detailEnd" class="text-right font-medium break-words"></span>
-        </div>
+            <div class="event-detail-row flex jurisdiction gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">End Time</strong>
+                <span id="detailEnd" class="text-right font-medium break-words"></span>
+            </div>
 
-        <div class="event-detail-description mt-5">
-            <strong class="block mb-1 text-muted text-sm">Description</strong>
-            <p id="detailDescription" class="whitespace-pre-wrap break-words text-sm text-[var(--text)]">No description provided.</p>
-        </div>
+            <div class="event-detail-description mt-5">
+                <strong class="block mb-1 text-muted text-sm">Description</strong>
+                <p id="detailDescription" class="whitespace-pre-wrap break-words text-sm text-[var(--text)]">No description provided.</p>
+            </div>
 
-        <!-- Single unified action bar with Delete on the left and Close on the right -->
-        <div class="dialog-actions flex justify-between items-center mt-6">
-            <button type="button" id="deleteEventBtn" class="min-h-[38px] px-4 py-2 bg-[#fce8e6] text-[#b3261e] border border-[#fadcda] rounded-full font-medium hover:bg-[#fbd4d1] transition-colors">
-                Delete
-            </button>
-            <button type="button" id="closeEventDetailsBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">
-                Close
-            </button>
+            <!-- Single unified action bar with Delete on the left and Close on the right -->
+            <div class="dialog-actions flex justify-between items-center mt-6">
+                <button type="button" id="deleteEventBtn" class="min-h-[38px] px-4 py-2 bg-[#fce8e6] text-[#b3261e] border border-[#fadcda] rounded-full font-medium hover:bg-[#fbd4d1] transition-colors">
+                    Delete
+                </button>
+                <button type="button" id="closeEventDetailsDialogBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">
+                    Close
+                </button>
+            </div>
         </div>
-    </div>
-</dialog>
+    </dialog>
 
     <!-- JavaScript Link Included Here -->
     <script src="script.js" defer></script>

@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en" class="min-h-full scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google Calendar Clone</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: ['class', '[data-theme="dark"]'],
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Google Sans"', 'Roboto', 'Arial', 'Helvetica', 'sans-serif'],
+                    },
+                    colors: {
+                        primary: {
+                            DEFAULT: 'var(--primary)',
+                            hover: 'var(--primary-hover)',
+                            light: 'var(--primary-light)',
+                        },
+                        surface: {
+                            DEFAULT: 'var(--surface)',
+                            hover: 'var(--surface-hover)',
+                        },
+                        muted: 'var(--muted)',
+                        border: 'var(--border)',
+                        eventBlue: {
+                            DEFAULT: 'var(--event-blue)',
+                            bg: 'var(--event-blue-bg)',
+                        }
+                    },
+                    boxShadow: {
+                        sm: '0 1px 2px rgba(60, 64, 67, 0.15)',
+                        md: '0 4px 12px rgba(60, 64, 67, 0.18)',
+                        lg: '0 8px 28px rgba(60, 64, 67, 0.2)',
+                    },
+                    borderRadius: {
+                        sm: '8px',
+                        md: '12px',
+                        lg: '20px',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Theme Variables Bridge */
+        :root {
+            color-scheme: light;
+            --primary: #0b57d0;
+            --primary-hover: #0842a0;
+            --primary-light: #d3e3fd;
+            --background: #f8fafd;
+            --surface: #ffffff;
+            --surface-hover: #f1f5f9;
+            --text: #1f1f1f;
+            --muted: #5f6368;
+            --border: #e0e3e7;
+            --event-blue: #1967d2;
+            --event-blue-bg: #d3e3fd;
+        }
+
+        [data-theme="dark"], .dark {
+            color-scheme: dark;
+            --primary: #a8c7fa;
+            --primary-hover: #d3e3fd;
+            --primary-light: #304568;
+            --background: #131413;
+            --surface: #1e1f20;
+            --surface-hover: #292a2d;
+            --text: #e3e3e3;
+            --muted: #bdc1c6;
+            --border: #3c4043;
+            --event-blue: #a8c7fa;
+            --event-blue-bg: #233957;
+        }
+
+        dialog::backdrop {
+            background: rgba(32, 33, 36, 0.5);
+            backdrop-filter: blur(2px);
+        }
+
+        button:focus-visible,
+        input:focus-visible,
+        select:focus-visible,
+        textarea:focus-visible {
+            outline: 2px solid var(--primary);
+            outline-offset: 3px;
+        }
+
+        /* Essential JavaScript Target Classes for Grid & Events Rendering */
+        .month-grid, .week-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(100px, 1fr));
+            min-width: 700px;
+            flex: 1;
+        }
+
+        .weekday {
+            padding: 12px 8px;
+            text-align: center;
+            background: var(--background);
+            color: var(--muted);
+            font-size: 16px;
+            font-weight: 700;
+            letter-spacing: 0.7px;
+            text-transform: uppercase;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .calendar-day, .week-day {
+            min-height: 120px;
+            padding: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            position: relative;
+            background: var(--surface);
+            border-right: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+            transition: background 0.15s ease;
+        }
+
+        .calendar-day:nth-child(7n), .week-day:last-child {
+            border-right: none;
+        }
+
+        .calendar-day:hover, .week-day:hover {
+            background: var(--surface-hover);
+        }
+
+        .calendar-day.empty {
+            background: var(--background);
+            opacity: 0.4;
+        }
+
+        .day-number {
+            width: 28px;
+            height: 28px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text);
+            border-radius: 50%;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+
+        .calendar-day.today .day-number, .week-day.today .day-number {
+            background: var(--primary);
+            color: #ffffff;
+            font-weight: 700;
+        }
+
+        .day-events {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            overflow-y: auto;
+            max-height: 80px;
+        }
+
+        .calendar-event {
+            padding: 4px 8px;
+            background: var(--event-blue-bg);
+            color: var(--event-blue);
+            border-left: 4px solid var(--primary);
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            cursor: pointer;
+        }
+
+        .calendar-event:hover {
+            filter: brightness(0.95);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-[var(--background)] text-[var(--text)] font-sans leading-normal overflow-x-hidden transition-colors duration-200">
+
+    <!-- Main Application -->
+    <div class="calendar-app flex flex-col min-h-screen">
+
+        <!-- Header -->
+        <header class="header sticky top-0 z-[100] min-h-[76px] px-3 md:px-6 py-3 flex items-center justify-between gap-5 bg-surface border-b border-border">
+            <div class="header-left flex items-center gap-3">
+                <button id="menuBtn" aria-label="Toggle sidebar" class="w-[42px] h-[42px] p-0 inline-flex items-center justify-center border border-transparent rounded-full text-[21px] hover:bg-primary-light transition-colors">☰</button>
+                <h1 class="text-[22px] font-medium tracking-[-0.4px] text-[var(--text)]">Calendar</h1>
+            </div>
+
+            <div class="header-center flex items-center gap-3">
+                <button id="todayBtn" class="min-h-[40px] px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all">Today</button>
+                <button id="prevBtn" aria-label="Previous period" class="min-h-[40px] px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all">‹</button>
+                <button id="nextBtn" aria-label="Next period" class="min-h-[40px] px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all">›</button>
+                <h2 id="currentDate" class="min-w-[170px] ml-2 text-[20px] font-normal text-[var(--text)]"></h2>
+            </div>
+
+            <div class="header-right flex items-center gap-3">
+                <!-- Theme Toggle Button -->
+                <button id="themeToggleBtn" aria-label="Toggle dark mode" title="Toggle theme" class="min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover transition-all">🌙</button>
+
+                <select id="viewSelect" aria-label="Calendar view" class="min-h-[40px] max-w-[140px] px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary transition-all outline-none">
+                    <option value="month">Month</option>
+                    <option value="week">Week</option>
+                    <option value="day">Day</option>
+                    <!-- <option value="agenda">Agenda</option> -->
+                </select>
+
+                <div id="authButtons" class="flex items-center gap-2">
+                    <button id="registerBtn" class="min-h-[40px] px-[14px] py-2 text-primary font-medium border border-border rounded-full hover:bg-primary-light active:scale-95 transition-all">Register</button>
+                    <button id="loginBtn" class="min-h-[40px] px-[14px] py-2 bg-primary text-white font-medium border border-primary rounded-full hover:bg-primary-hover active:scale-95 transition-all">Login</button>
+                </div>
+
+                <div class="profile-container relative" id="profileContainer" hidden>
+                    <button
+                        id="profileBtn"
+                        class="profile-btn w-10 h-10 flex items-center justify-center bg-primary text-white rounded-full font-bold shadow-sm"
+                        type="button"
+                        aria-label="Open profile menu"
+                        aria-expanded="false"
+                    >
+                        <span id="profileInitial">U</span>
+                    </button>
+
+                    <div class="profile-menu  absolute top-[50px] right-0 w-[240px] p-4 bg-surface border border-border rounded-2xl shadow-lg z-[1000]" id="profileMenu" hidden>
+                        <p id="profileName" class="font-semibold text-sm mb-1">User</p>
+                        <p id="profileEmail" class="text-xs text-muted mb-3"></p>
+                        <button id="profileLogoutBtn" type="button" class="w-full p-2 bg-surface-hover text-[#b3261e] border border-border rounded-md font-semibold hover:bg-[#fce8e6] transition-colors">Logout</button>
+                    </div>
+                </div>
+
+                <button id="logoutBtn" hidden class="min-h-[40px] px-[14px] py-2 text-[#b3261e] border border-border rounded-full font-medium hover:bg-[#fce8e6] transition-all">Logout</button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content flex flex-col md:flex-row flex-1 min-h-[calc(100vh-76px)]">
+
+            <!-- Sidebar -->
+            <aside class="sidebar w-full md:w-[264px] shrink-0 p-6 bg-surface border-b md:border-b-0 md:border-r border-border transition-all duration-250 [&.sidebar-hidden]:hidden" id="sidebar">
+                <button id="createEventBtn" class="create-event-btn w-full min-h-[52px] mb-7 px-[22px] py-[14px] flex items-center justify-center gap-[10px] bg-primary text-white border border-primary rounded-[14px] text-[15px] font-semibold shadow-sm hover:bg-primary-hover hover:shadow-md hover:-translate-y-[1px] transition-all">
+                    + Create
+                </button>
+
+                <!-- <section class="mini-calendar-section mb-6">
+                    <h3 class="mb-3 pl-1 text-muted text-xs font-bold tracking-[0.8px] uppercase">Mini Calendar</h3>
+                    <div id="miniCalendar" class="text-sm"></div>
+                </section> -->
+
+                <section class="my-calendars mb-6">
+                    <h3 class="mb-3 pl-1 text-muted text-xs font-bold tracking-[0.8px] uppercase">My Calendars</h3>
+                    <div id="calendarList" class="flex flex-col gap-2 text-muted text-sm pl-1"></div>
+                </section>
+
+                <!-- Upcoming Events Section -->
+                <section class="upcoming-events-section mb-6">
+                    <h3 class="upcoming-events-heading flex items-center justify-between gap-2 mb-1 text-sm font-semibold text-[var(--text)]">
+                        <span class="upcoming-heading-text flex items-center gap-2">
+                            <span class="notification-icon text-[17px]" aria-hidden="true">🔔</span>
+                            Upcoming Events
+                        </span>
+                        <span id="upcomingCount" class="upcoming-count min-w-[22px] h-[22px] px-[6px] inline-flex items-center justify-center rounded-full bg-[#d93025] text-white text-xs font-semibold box-border">0</span>
+                    </h3>
+
+                    <p class="upcoming-subtitle m-0 mb-3 text-muted text-xs">Next 7 days</p>
+
+                    <div id="upcomingEvents" class="flex flex-col gap-[10px]">
+                        <p class="upcoming-empty m-0 text-muted text-xs italic py-2">
+                            Log in to see upcoming events.
+                        </p>
+                    </div>
+                </section>
+            </aside>
+
+            <!-- Calendar Workspace -->
+            <main class="calendar-workspace flex-1 min-w-0 p-3 md:p-6 flex flex-col bg-[var(--background)]">
+                <div class="search-bar flex items-center gap-2 mb-4">
+                    <input
+                        type="search"
+                        id="searchInput"
+                        placeholder="Search events"
+                        aria-label="Search events"
+                        class="flex-1 min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-full text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                    >
+                    <button id="searchBtn" class="min-h-[40px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover hover:border-primary transition-all">Search</button>
+                </div>
+
+                <section
+                    id="calendarContainer"
+                    class="calendar-container flex-1 min-h-[600px] overflow-auto flex flex-col bg-surface border border-border rounded-xl shadow-sm"
+                    aria-label="Calendar events"
+                >
+                    <!-- Calendar view rendered using JavaScript -->
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- Login Dialog -->
+    <dialog id="loginDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
+        <form id="loginForm" class="flex flex-col gap-3">
+            <h2 class="mb-4 text-[22px] font-semibold">Login</h2>
+
+            <label for="username" class="text-muted text-xs font-semibold">Username</label>
+            <input
+                type="text"
+                id="username"
+                autocomplete="username"
+                required
+                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+            >
+
+            <label for="password" class="text-muted text-xs font-semibold">Password</label>
+            <input
+                type="password"
+                id="password"
+                autocomplete="current-password"
+                required
+                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+            >
+
+            <p id="loginMessage" role="status" class="text-sm text-[#b3261e]"></p>
+
+            <p class="text-sm text-muted">
+                Don't have an account?
+                <button type="button" id="showRegisterFromLogin" class="text-primary font-semibold underline ml-1">
+                    Register
+                </button>
+            </p>
+
+            <div class="dialog-actions flex justify-end gap-2.5 mt-4">
+                <button type="button" id="cancelLoginBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
+                <button type="submit" class="min-h-[38px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">Login</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Registration Dialog -->
+    <dialog id="registerDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
+        <form id="registerForm" class="flex flex-col gap-3">
+            <h2 class="mb-4 text-[22px] font-semibold">Create an Account</h2>
+
+            <label for="registerUsername" class="text-muted text-xs font-semibold">Username</label>
+            <input
+                type="text"
+                id="registerUsername"
+                autocomplete="username"
+                required
+                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+            >
+
+            <label for="registerEmail" class="text-muted text-xs font-semibold">Email</label>
+            <input
+                type="email"
+                id="registerEmail"
+                autocomplete="email"
+                required
+                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+            >
+
+            <label for="registerPassword" class="text-muted text-xs font-semibold">Password</label>
+            <input
+                type="password"
+                id="registerPassword"
+                autocomplete="new-password"
+                required
+                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+            >
+
+            <label for="confirmPassword" class="text-muted text-xs font-semibold">Confirm password</label>
+            <input
+                type="password"
+                id="confirmPassword"
+                autocomplete="new-password"
+                required
+                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+            >
+
+            <p id="registerMessage" role="status" class="text-sm text-[#b3261e]"></p>
+
+            <p class="text-sm text-muted">
+                Already have an account?
+                <button type="button" id="showLoginFromRegister" class="text-primary font-semibold underline ml-1">
+                    Login
+                </button>
+            </p>
+
+            <div class="dialog-actions flex justify-end gap-2.5 mt-4">
+                <button type="button" id="cancelRegisterBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
+                <button type="submit" id="submitRegisterBtn" class="min-h-[38px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">
+                    Register
+                </button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Event Creation/Editing Dialog -->
+    <dialog id="eventDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
+        <form id="eventForm" class="flex flex-col gap-3">
+            <h2 id="eventDialogTitle" class="mb-4 text-[22px] font-semibold">Create Event</h2>
+
+            <input type="hidden" id="eventId">
+
+            <label for="eventType" class="text-muted text-xs font-semibold">Type</label>
+            <select id="eventType" name="event_type" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
+                <option value="event">Event</option>
+                <option value="task">Task</option>
+                <option value="appointment">Appointment</option>
+            </select>
+            
+            <div class="mt-4">
+                <label for="eventCalendar" class="block mb-2 text-sm font-medium">
+                    Calendar
+                </label>
+
+                <select
+                    id="eventCalendar"
+                    name="calendar"
+                    required
+                    class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                >
+                    <option value="">Select a calendar</option>
+                </select>
+            </div>
+
+            <label for="eventTitle" class="text-muted text-xs font-semibold">Title</label>
+            <input
+                type="text"
+                id="eventTitle"
+                placeholder="Enter title"
+                required
+                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+            >
+
+            <label for="eventDate" class="text-muted text-xs font-semibold">Date</label>
+            <input type="date" id="eventDate" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
+
+            <div class="event-time-inputs grid grid-cols-2 gap-3">
+                <div>
+                    <label for="eventStartTime" class="text-muted text-xs font-semibold block mb-1">Start Time</label>
+                    <input type="time" id="eventStartTime" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
+                </div>
+
+                <div>
+                    <label for="eventEndTime" class="text-muted text-xs font-semibold block mb-1">End Time</label>
+                    <input type="time" id="eventEndTime" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
+                </div>
+            </div>
+
+            <label for="eventDescription" class="text-muted text-xs font-semibold mt-1">Description</label>
+            <textarea id="eventDescription" class="w-full min-h-[80px] p-3 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light resize-vertical"></textarea>
+
+            <div class="dialog-actions flex justify-end gap-2.5 mt-4">
+                <button type="button" id="cancelEventBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
+                <button type="submit" id="saveEventBtn" class="min-h-[38px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">Save</button>
+            </div>
+        </form>
+    </dialog>
+
+    <!-- Event Details Dialog -->
+    <dialog id="eventDetailsDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-6 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
+        <div class="event-details-content">
+            <h2 class="text-[22px] font-semibold mb-5">Event Details</h2>
+
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">Title</strong>
+                <span id="detailTitle" class="text-right font-medium break-words"></span>
+            </div>
+
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">Type</strong>
+                <span id="detailType" class="text-right font-medium break-words"></span>
+            </div>
+
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">Date</strong>
+                <span id="detailDate" class="text-right font-medium gap-4 mb-3.5 break-words"></span>
+            </div>
+
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">Start Time</strong>
+                <span id="detailStart" class="text-right font-medium break-words"></span>
+            </div>
+
+            <div class="event-detail-row flex jurisdiction gap-4 mb-3.5">
+                <strong class="shrink-0 text-muted text-sm">End Time</strong>
+                <span id="detailEnd" class="text-right font-medium break-words"></span>
+            </div>
+
+            <div class="event-detail-description mt-5">
+                <strong class="block mb-1 text-muted text-sm">Description</strong>
+                <p id="detailDescription" class="whitespace-pre-wrap break-words text-sm text-[var(--text)]">No description provided.</p>
+            </div>
+
+            <!-- Single unified action bar with Delete on the left and Close on the right -->
+            <div class="dialog-actions flex justify-between items-center mt-6">
+                <button type="button" id="deleteEventBtn" class="min-h-[38px] px-4 py-2 bg-[#fce8e6] text-[#b3261e] border border-[#fadcda] rounded-full font-medium hover:bg-[#fbd4d1] transition-colors">
+                    Delete
+                </button>
+                <button type="button" id="closeEventDetailsDialogBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">
+                    Close
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <!-- JavaScript Link Included Here -->
+    <script src="script.js" defer></script>
+</body>
+</html>

@@ -2,15 +2,20 @@
 from rest_framework import serializers
 
 from .models import Event
-from calendars.models import Calendar
 
 
 class EventSerializer(serializers.ModelSerializer):
-    created_by = serializers.ReadOnlyField(source="created_by.username")
-    calendar_name = serializers.ReadOnlyField(source="calendar.name")
+    created_by = serializers.ReadOnlyField(
+        source="created_by.username"
+    )
+
+    calendar_name = serializers.ReadOnlyField(
+        source="calendar.name"
+    )
 
     class Meta:
         model = Event
+
         fields = [
             "id",
             "calendar",
@@ -21,11 +26,13 @@ class EventSerializer(serializers.ModelSerializer):
             "location",
             "start_time",
             "end_time",
+            "event_type",
             "all_day",
             "color",
             "created_at",
             "updated_at",
         ]
+
         read_only_fields = [
             "id",
             "created_by",
@@ -39,6 +46,7 @@ class EventSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 "You can only assign events to your own calendars."
             )
+
         return value
 
     def validate(self, data):
@@ -46,6 +54,7 @@ class EventSerializer(serializers.ModelSerializer):
             "start_time",
             getattr(self.instance, "start_time", None),
         )
+
         end_time = data.get(
             "end_time",
             getattr(self.instance, "end_time", None),
@@ -53,7 +62,9 @@ class EventSerializer(serializers.ModelSerializer):
 
         if start_time and end_time and end_time <= start_time:
             raise serializers.ValidationError(
-                {"end_time": "End time must be after start time."}
+                {
+                    "end_time": "End time must be after start time."
+                }
             )
 
         return data

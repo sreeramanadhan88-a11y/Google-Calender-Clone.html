@@ -45,6 +45,9 @@ async function apiRequest(endpoint, options = {}) {
 const currentDateElement = document.getElementById("currentDate");
 const calendarContainer = document.getElementById("calendarContainer");
 const viewSelect = document.getElementById("viewSelect");
+const searchInput = document.getElementById("searchInput");
+const searchBtn = document.getElementById("searchBtn");
+const searchResults = document.getElementById("searchResults");
 
 const todayBtn = document.getElementById("todayBtn");
 const prevBtn = document.getElementById("prevBtn");
@@ -89,48 +92,13 @@ const eventDialog = document.getElementById("eventDialog");
 const eventForm = document.getElementById("eventForm");
 const cancelEventBtn = document.getElementById("cancelEventBtn");
 
-// Open Event Dialog when Create button is clicked
-createEventBtn.addEventListener("click", () => {
-    if (!getAccessToken()) {
-        alert("Please log in before creating an item.");
-        return;
-    }
-
-    eventForm.reset();
-
-    const eventIdInput = document.getElementById("eventId");
-    if (eventIdInput) {
-        eventIdInput.value = "";
-    }
-
-    const eventDate = document.getElementById("eventDate");
-    if (eventDate) {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, "0");
-        const day = String(today.getDate()).padStart(2, "0");
-
-        eventDate.value = `${year}-${month}-${day}`;
-    }
-
-    document.getElementById("eventDialogTitle").textContent = "Create Event";
-
-    if (!eventDialog.open) {
-        eventDialog.showModal();
-    }
-});
-
-// Close Event Dialog when Cancel is clicked
-cancelEventBtn.addEventListener("click", () => {
-    eventDialog.close();
-});
-
 // ---------- Calendar State ----------
 
 let selectedDate = new Date();
 let currentView = "month";
 const today = new Date();
 let events = [];
+let activeCalendarId = null;
 
 // ---------- Date Helpers ----------
 
@@ -150,44 +118,118 @@ function getDateKey(date) {
     return `${year}-${month}-${day}`;
 }
 
-// ---------- Event Rendering Helper ----------
-
-
-function renderEventsForSelector(selector) {
-    // events.forEach(event => {
-    //     const eventDate = new Date(event.start_time);
-
-    //     if (Number.isNaN(eventDate.getTime())) {
-    //         console.warn("Invalid event start_time:", event);
-    //         return;
-    //     }
-
-    //     const dateKey = getDateKey(eventDate);
-
-    //     const dayCell = calendarContainer.querySelector(
-    //         `${selector}[data-date="${dateKey}"]`
-    //     );
-
-    //     if (dayCell) {
-    //         const eventsContainer = dayCell.querySelector(".day-events");
-
-    //         if (!eventsContainer) {
-    //             return;
-    //         }
-
-    //         // Show a small event indicator without the event name
-    //         const eventElement = document.createElement("div");
-    //         eventElement.className = "calendar-event";
-    //         eventElement.setAttribute("aria-label", "Event scheduled");
-    //         eventElement.title = "Event scheduled";
-
-    //         eventsContainer.appendChild(eventElement);
-    //     }
-    // });
-
-    return;
+function formatDateInput(date) {
+    return getDateKey(date);
 }
 
+function formatTimeInput(date) {
+    const hours = String(date.getHours()).padStart(2, "0");
+    const minutes = String(date.getMinutes()).padStart(2, "0");
+
+    return `${hours}:${minutes}`;
+}
+
+// ---------- Event Rendering Helper ----------
+
+function renderEventsForSelector(selector) {
+    getFilteredEvents().forEach(event => {
+
+        const eventDate = new Date(event.start_time);
+
+        if (Number.isNaN(eventDate.getTime())) {
+            console.warn("Invalid event start_time:", event);
+            return;
+        }
+
+        const dateKey = getDateKey(eventDate);
+
+        const dayCell = calendarContainer.querySelector(
+            `${selector}[data-date="${dateKey}"]`
+        );
+
+        if (!dayCell) return;
+
+        const eventsContainer = dayCell.querySelector(".day-events");
+
+        if (!eventsContainer) return;
+
+        const eventElement = document.createElement("div");
+
+        eventElement.className = "calendar-event";
+        eventElement.title = event.title || "Event scheduled";
+
+        const eventTime = eventDate.toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit"
+        });
+
+        eventElement.textContent = `${eventTime} - ${event.title}`;
+
+        eventElement.setAttribute(
+            "aria-label",
+            event.title || "Event scheduled"
+        );
+
+        eventsContainer.appendChild(eventElement);
+    });
+}
+
+function getFilteredEvents() {
+    if (activeCalendarId === null) {
+        return events;
+    }
+
+    return events.filter(
+        event => String(event.calendar) === String(activeCalendarId)
+    );
+}
+
+function searchEvents() {
+    const searchText = searchInput.value.trim().toLowerCase();
+
+    searchResults.innerHTML = "";
+    searchResults.classList.add("hidden");
+
+    if (!searchText) {
+        renderCalendar();
+        return;
+    }
+
+    const filteredEvents = getFilteredEvents().filter(event =>
+        (event.title || "").toLowerCase().includes(searchText)
+    );
+
+    if (filteredEvents.length === 0) {
+        searchResults.innerHTML = `
+            <p class="text-sm text-muted p-3">
+                No events found.
+            </p>
+        `;
+    } else {
+        filteredEvents.forEach(event => {
+            const item = document.createElement("div");
+
+            item.className = `
+                p-3 mb-2 rounded-xl border border-border
+                bg-surface hover:bg-surface-hover
+                cursor-pointer transition-all
+            `;
+
+            const title = document.createElement("p");
+            title.className = "font-semibold text-sm";
+            title.textContent = event.title || "Untitled event";
+            item.appendChild(title);
+
+            item.addEventListener("click", () => {
+                showEventDetails(event);
+            });
+
+            searchResults.appendChild(item);
+        });
+    }
+
+    searchResults.classList.remove("hidden");
+}
 
 // ---------- Calendar Rendering ----------
 
@@ -251,7 +293,8 @@ function renderMonthView() {
     html += `</div>`;
     calendarContainer.innerHTML = html;
 
-    renderEventsForSelector(".calendar-day");
+    // Events are intentionally not shown in the month grid.
+    // They appear only in the week view.
 }
 
 // ---------- Week View ----------
@@ -311,7 +354,7 @@ function renderDayView() {
 
     const eventsContainer = calendarContainer.querySelector(".day-events");
 
-    const matchingEvents = events.filter(event => {
+    const matchingEvents = getFilteredEvents().filter(event => {
         const eventDate = new Date(event.start_time);
 
         return (
@@ -350,7 +393,7 @@ function renderAgendaView() {
     const agendaContainer =
         calendarContainer.querySelector(".agenda-events");
 
-    const upcomingEvents = events
+    const upcomingEvents = getFilteredEvents()
         .filter(event => {
             const eventDate = new Date(event.start_time);
 
@@ -405,11 +448,15 @@ todayBtn.addEventListener("click", () => {
     selectedDate = new Date();
     renderCalendar();
 });
-viewSelect.addEventListener("change", () => renderCalendar());
+
+viewSelect.addEventListener("change", () => {
+    const selectedView = viewSelect.value;
+
+    window.location.href = `${selectedView}.html`;
+});
 menuBtn.addEventListener("click", () => sidebar.classList.toggle("sidebar-hidden"));
 
 // ---------- Load User Calendars ----------
-
 
 async function loadCalendars() {
     if (!calendarList) return;
@@ -417,7 +464,8 @@ async function loadCalendars() {
     calendarList.textContent = "Loading calendars...";
 
     if (!getAccessToken()) {
-        calendarList.textContent = "Please log in to view your calendars.";
+        calendarList.textContent =
+            "Please log in to view your calendars.";
 
         if (eventCalendar) {
             eventCalendar.innerHTML =
@@ -430,7 +478,7 @@ async function loadCalendars() {
     try {
         const data = await apiRequest("/calendars/");
 
-        // Support both regular and paginated API responses
+        // Support regular and paginated API responses
         const calendars = Array.isArray(data)
             ? data
             : (data.results || []);
@@ -450,38 +498,87 @@ async function loadCalendars() {
         let defaultCalendarId = null;
 
         calendars.forEach((calendar) => {
-            // Display calendar in the sidebar
+            // Create the clickable sidebar item
             const item = document.createElement("div");
             item.className = "calendar-item";
+            item.dataset.calendarId = String(calendar.id);
+            item.style.display = "flex";
+            item.style.alignItems = "center";
+            item.style.gap = "10px";
+            item.style.padding = "8px";
+            item.style.borderRadius = "8px";
+            item.style.cursor = "pointer";
+            item.style.transition = "background-color 0.2s";
 
+            item.setAttribute("role", "button");
+            item.setAttribute("tabindex", "0");
+
+            // Calendar color indicator
+            const colorDot = document.createElement("span");
+            colorDot.style.width = "12px";
+            colorDot.style.height = "12px";
+            colorDot.style.borderRadius = "50%";
+            colorDot.style.backgroundColor =
+                calendar.color || "#4285F4";
+            colorDot.style.flexShrink = "0";
+
+            // Calendar name
             const name = document.createElement("span");
             name.textContent = calendar.name;
 
             if (calendar.is_default) {
-                name.textContent += " (Default)";
                 defaultCalendarId = calendar.id;
             }
 
-            item.appendChild(name);
+            item.append(colorDot, name);
             calendarList.appendChild(item);
 
-            // Add calendar to the event form dropdown
+            // Select or deselect this calendar
+            function toggleCalendarFilter() {
+                if (
+                    String(activeCalendarId) ===
+                    String(calendar.id)
+                ) {
+                    // Click again to show all calendars
+                    activeCalendarId = null;
+                } else {
+                    activeCalendarId = calendar.id;
+                }
+
+                updateCalendarSelection();
+                renderCalendar();
+                renderUpcomingEvents();
+            }
+
+            item.addEventListener("click", toggleCalendarFilter);
+
+            // Keyboard accessibility
+            item.addEventListener("keydown", (event) => {
+                if (
+                    event.key === "Enter" ||
+                    event.key === " "
+                ) {
+                    event.preventDefault();
+                    toggleCalendarFilter();
+                }
+            });
+
+            // Add calendar to event form dropdown
             if (eventCalendar) {
                 const option = document.createElement("option");
 
                 option.value = calendar.id;
-                option.textContent = calendar.is_default
-                    ? `${calendar.name} (Default)`
-                    : calendar.name;
-
+                option.textContent = calendar.name;
                 eventCalendar.appendChild(option);
             }
         });
 
-        // Automatically select the default calendar
+        // Keep the default calendar selected in the event form
         if (eventCalendar && defaultCalendarId !== null) {
             eventCalendar.value = String(defaultCalendarId);
         }
+
+        updateCalendarSelection();
 
     } catch (error) {
         console.error("Failed to load calendars:", error);
@@ -496,10 +593,26 @@ async function loadCalendars() {
     }
 }
 
+function updateCalendarSelection() {
+    if (!calendarList) return;
+
+    const items = calendarList.querySelectorAll(".calendar-item");
+
+    items.forEach((item) => {
+        const isSelected =
+            activeCalendarId !== null &&
+            item.dataset.calendarId === String(activeCalendarId);
+
+        item.style.backgroundColor = isSelected
+            ? "rgba(66, 133, 244, 0.15)"
+            : "transparent";
+
+        item.style.fontWeight = isSelected ? "600" : "400";
+        item.setAttribute("aria-pressed", String(isSelected));
+    });
+}
 
 // ---------- Load User Events ----------
-
-
 
 async function loadEvents() {
     if (!getAccessToken()) {
@@ -524,9 +637,6 @@ async function loadEvents() {
     renderCalendar();
     renderUpcomingEvents();
 }
-
-
-
 
 function renderUpcomingEvents() {
     const container = document.getElementById("upcomingEvents");
@@ -557,8 +667,8 @@ function renderUpcomingEvents() {
     );
 
     // Find events starting within the next 7 days
-    const upcomingEvents = events
-        .filter((event) => {
+    const upcomingEvents = getFilteredEvents()
+        .filter(event => {
             const startTime = new Date(event.start_time);
 
             return (
@@ -587,14 +697,40 @@ function renderUpcomingEvents() {
 
     upcomingEvents.forEach((event) => {
         const item = document.createElement("div");
-        item.className = "upcoming-event-item";
+
+        item.className = `
+            group p-3 mb-2
+            bg-surface
+            border border-border
+            border-l-4 border-l-primary
+            rounded-xl
+            shadow-sm
+            hover:shadow-md
+            hover:bg-surface-hover
+            hover:-translate-y-0.5
+            transition-all duration-200
+            cursor-pointer
+        `;
 
         const title = document.createElement("div");
-        title.className = "upcoming-event-title";
+
+        title.className = `
+            text-sm font-semibold
+            text-[var(--text)]
+            mb-2
+            break-words
+            group-hover:text-primary
+        `;
+
         title.textContent = event.title || "Untitled event";
 
         const time = document.createElement("div");
-        time.className = "upcoming-event-time";
+
+        time.className = `
+            text-xs
+            text-muted
+            flex items-center gap-2
+        `;
 
         const startTime = new Date(event.start_time);
 
@@ -607,8 +743,7 @@ function renderUpcomingEvents() {
 
         item.append(title, time);
 
-        // Make the notification clickable
-        item.style.cursor = "pointer";
+        // Make notification clickable
         item.setAttribute("role", "button");
         item.tabIndex = 0;
 
@@ -683,7 +818,7 @@ registerForm.addEventListener("submit", async (event) => {
 
         registerMessage.textContent = "Account created successfully! Please log in.";
         registerForm.reset();
-        
+
         // Close register dialog and open login dialog smoothly
         setTimeout(() => {
             registerDialog.close();
@@ -786,7 +921,7 @@ loginForm.addEventListener("submit", async event => {
         loginForm.reset();
 
         updateAuthUI();
-        await loadUserProfile(); // Populates profile name & initial immediately
+        await loadUserProfile();
         await loadCalendars();
         await loadEvents();
 
@@ -806,11 +941,11 @@ async function logoutUser() {
     updateAuthUI();
     await loadCalendars();
     renderCalendar();
+    renderUpcomingEvents();
 }
 
 profileLogoutBtn.addEventListener("click", logoutUser);
 logoutBtn.addEventListener("click", logoutUser);
-
 
 /* ---------- Create Event Dialog & Form ---------- */
 
@@ -831,33 +966,19 @@ createEventBtn.addEventListener("click", () => {
     // Reset the form for a new event
     eventForm.reset();
 
-    document.getElementById("eventId").value = "";
+    const eventIdInput = document.getElementById("eventId");
+    if (eventIdInput) {
+        eventIdInput.value = "";
+    }
 
-    // Set today's date and default start/end times
+    // Set today's date and default start time
     const now = new Date();
     now.setMinutes(0, 0, 0);
 
-    const end = new Date(now);
-    end.setHours(end.getHours() + 1);
+    document.getElementById("eventDate").value = formatDateInput(now);
 
-    const formatDate = (date) => {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, "0");
-        const day = String(date.getDate()).padStart(2, "0");
-
-        return `${year}-${month}-${day}`;
-    };
-
-    const formatTime = (date) => {
-        const hours = String(date.getHours()).padStart(2, "0");
-        const minutes = String(date.getMinutes()).padStart(2, "0");
-
-        return `${hours}:${minutes}`;
-    };
-
-    document.getElementById("eventDate").value = formatDate(now);
-    document.getElementById("eventStartTime").value = formatTime(now);
-    document.getElementById("eventEndTime").value = formatTime(end);
+    const startInput = document.getElementById("eventStartTime");
+    if (startInput) startInput.value = formatTimeInput(now);
 
     document.getElementById("eventDialogTitle").textContent = "Create Event";
 
@@ -866,12 +987,10 @@ createEventBtn.addEventListener("click", () => {
     }
 });
 
-
 // Close the dialog
 cancelEventBtn.addEventListener("click", () => {
     eventDialog.close();
 });
-
 
 // Save a new event
 eventForm.addEventListener("submit", async (event) => {
@@ -886,31 +1005,26 @@ eventForm.addEventListener("submit", async (event) => {
     const description = document.getElementById("eventDescription").value.trim();
     const date = document.getElementById("eventDate").value;
     const startTime = document.getElementById("eventStartTime").value;
-    const endTime = document.getElementById("eventEndTime").value;
+
     const eventType = document.getElementById("eventType").value;
+    const calendarId = eventCalendar ? eventCalendar.value : "";
 
     // Validate required fields
-    if (!title || !date || !startTime || !endTime) {
-        alert("Please fill in the title, date, start time, and end time.");
+    if (!title || !date || !startTime) {
+        alert("Please fill in the title, date, and start time.");
         return;
     }
 
-    // Convert the selected date and times into JavaScript Date objects
+    // Convert the selected date and start time into a Date object
     const start = new Date(`${date}T${startTime}`);
-    const end = new Date(`${date}T${endTime}`);
 
-    if (
-        Number.isNaN(start.getTime()) ||
-        Number.isNaN(end.getTime())
-    ) {
+    if (Number.isNaN(start.getTime())) {
         alert("Please enter a valid date and time.");
         return;
     }
 
-    if (end <= start) {
-        alert("End time must be later than start time.");
-        return;
-    }
+    // Automatically set end time to one hour after start time
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
 
     const saveButton = document.getElementById("saveEventBtn");
     saveButton.disabled = true;
@@ -921,21 +1035,15 @@ eventForm.addEventListener("submit", async (event) => {
             title: title,
             description: description,
             start_time: start.toISOString(),
-            end_time: end.toISOString()
+            end_time: end.toISOString(),
+            event_type: eventType
         };
 
-        /*
-         * Your previous API payload included a calendar ID.
-         * Add the calendar field back if your Django API requires it.
-         *
-         * Example:
-         * eventData.calendar = Number(eventCalendar.value);
-         *
-         * Send event_type only after confirming that your Django
-         * serializer accepts this field.
-         */
+        if (calendarId) {
+            eventData.calendar = Number(calendarId);
+        }
 
-        const response = await apiRequest("/events/", {
+        await apiRequest("/events/", {
             method: "POST",
             body: JSON.stringify(eventData)
         });
@@ -951,15 +1059,34 @@ eventForm.addEventListener("submit", async (event) => {
     } catch (error) {
         console.error("Error creating event:", error);
 
-        alert(
-            `Could not save the event: ${error.message}`
-        );
+        alert(`Could not save the event: ${error.message}`);
 
     } finally {
         saveButton.disabled = false;
         saveButton.textContent = "Save";
     }
 });
+
+// ---------- Hide End Time Field ----------
+// End time is set automatically (start + 1 hour), so the field is not needed.
+
+(function hideEndTimeField() {
+    const endInput = document.getElementById("eventEndTime");
+
+    if (endInput) {
+        endInput.required = false;
+        endInput.disabled = true;
+        endInput.hidden = true;
+        endInput.style.display = "none";
+    }
+
+    const endLabel = document.querySelector('label[for="eventEndTime"]');
+
+    if (endLabel) {
+        endLabel.hidden = true;
+        endLabel.style.display = "none";
+    }
+})();
 
 // ---------- Initial Setup ----------
 
@@ -978,7 +1105,9 @@ const themeToggleBtn = document.getElementById("themeToggleBtn");
 // Check for saved user preference on load
 const savedTheme = localStorage.getItem("theme");
 if (savedTheme) {
-    document.documentElement.setAttribute("data-theme", savedTheme);
+    if (savedTheme === "dark") {
+        document.documentElement.setAttribute("data-theme", "dark");
+    }
     if (themeToggleBtn) {
         themeToggleBtn.textContent = savedTheme === "dark" ? "☀️" : "🌙";
     }
@@ -1001,8 +1130,9 @@ if (themeToggleBtn) {
     });
 }
 
+// ---------- Event Details ----------
 
-let currentActiveEventId = null; // Ensure this is declared globally
+let currentActiveEventId = null;
 
 function showEventDetails(event) {
     const dialog = document.getElementById("eventDetailsDialog");
@@ -1015,7 +1145,6 @@ function showEventDetails(event) {
     currentActiveEventId = event.id;
 
     const start = new Date(event.start_time);
-    const end = new Date(event.end_time);
 
     document.getElementById("detailTitle").textContent =
         event.title || "Untitled event";
@@ -1040,14 +1169,6 @@ function showEventDetails(event) {
             })
             : "Unavailable";
 
-    document.getElementById("detailEnd").textContent =
-        !Number.isNaN(end.getTime())
-            ? end.toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit"
-            })
-            : "Unavailable";
-
     document.getElementById("detailDescription").textContent =
         event.description || "No description provided.";
 
@@ -1056,16 +1177,30 @@ function showEventDetails(event) {
     }
 }
 
-const closeDetailsButton = document.getElementById("closeEventDetailsBtn");
 const eventDetailsDialog = document.getElementById("eventDetailsDialog");
 
-if (closeDetailsButton && eventDetailsDialog) {
-    closeDetailsButton.addEventListener("click", function () {
-        eventDetailsDialog.close();
+if (eventDetailsDialog) {
+    // Close with the button (works even if the click lands on an icon inside it)
+    eventDetailsDialog.addEventListener("click", (e) => {
+        // Any button inside the dialog except Delete closes it,
+        // so this works whatever ID the close button has in your HTML
+        const clickedButton = e.target.closest("button");
+
+        if (clickedButton && clickedButton.id !== "deleteEventBtn") {
+            e.preventDefault();
+            eventDetailsDialog.close();
+            return;
+        }
+
+        // Clicking the dark backdrop outside the dialog also closes it
+        if (e.target === eventDetailsDialog) {
+            eventDetailsDialog.close();
+        }
     });
 }
 
 // ---------- Delete Event Handler ----------
+
 const deleteEventBtn = document.getElementById("deleteEventBtn");
 
 if (deleteEventBtn) {
@@ -1098,5 +1233,3 @@ if (deleteEventBtn) {
         }
     });
 }
-
-
