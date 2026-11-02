@@ -642,6 +642,75 @@ async function loadEvents() {
     renderUpcomingEvents();
 }
 
+// ---------- Upcoming + Past Events (sidebar) ----------
+
+let pastVisibleCount = 10;
+
+function createSidebarEventCard(event, isPast = false) {
+    const item = document.createElement("div");
+
+    item.className = `
+        group p-3 mb-2
+        bg-surface
+        border border-border
+        border-l-4 border-l-primary
+        rounded-xl
+        shadow-sm
+        hover:shadow-md
+        hover:bg-surface-hover
+        hover:-translate-y-0.5
+        transition-all duration-200
+        cursor-pointer
+        ${isPast ? "opacity-70" : ""}
+    `;
+
+    const title = document.createElement("div");
+    title.className = `
+        text-sm font-semibold
+        text-[var(--text)]
+        mb-2
+        break-words
+        group-hover:text-primary
+    `;
+    title.textContent = event.title || "Untitled event";
+
+    const time = document.createElement("div");
+    time.className = "text-xs text-muted flex items-center gap-2";
+
+    const startTime = new Date(event.start_time);
+    time.textContent = startTime.toLocaleString([], {
+        day: "numeric",
+        month: "short",
+        year: isPast ? "numeric" : undefined,
+        hour: "2-digit",
+        minute: "2-digit"
+    });
+
+    item.append(title, time);
+
+    item.setAttribute("role", "button");
+    item.tabIndex = 0;
+
+    item.addEventListener("click", () => showEventDetails(event));
+
+    item.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            showEventDetails(event);
+        }
+    });
+
+    return item;
+}
+
+function createSidebarSubheading(text) {
+    const heading = document.createElement("p");
+    heading.className =
+        "mt-2 mb-2 text-muted text-xs font-bold tracking-[0.8px] uppercase";
+    heading.textContent = text;
+    return heading;
+}
+
 function renderUpcomingEvents() {
     const container = document.getElementById("upcomingEvents");
 
@@ -666,106 +735,75 @@ function renderUpcomingEvents() {
     }
 
     const now = new Date();
-    const next7Days = new Date(
-        now.getTime() + 7 * 24 * 60 * 60 * 1000
+    const next7Days = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const validEvents = getFilteredEvents().filter(
+        event => !Number.isNaN(new Date(event.start_time).getTime())
     );
 
-    // Find events starting within the next 7 days
-    const upcomingEvents = getFilteredEvents()
+    // Events starting within the next 7 days (soonest first)
+    const upcomingEvents = validEvents
         .filter(event => {
             const startTime = new Date(event.start_time);
-
-            return (
-                !Number.isNaN(startTime.getTime()) &&
-                startTime > now &&
-                startTime <= next7Days
-            );
+            return startTime > now && startTime <= next7Days;
         })
-        .sort(
-            (a, b) =>
-                new Date(a.start_time) - new Date(b.start_time)
-        );
+        .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+
+    // Events that already started (most recent first)
+    const pastEvents = validEvents
+        .filter(event => new Date(event.start_time) <= now)
+        .sort((a, b) => new Date(b.start_time) - new Date(a.start_time));
+
+    // Badge only counts upcoming events
+    if (countBadge) {
+        countBadge.textContent = upcomingEvents.length;
+    }
+
+    // ----- Upcoming section -----
+    container.appendChild(createSidebarSubheading("Upcoming"));
 
     if (upcomingEvents.length === 0) {
         const message = document.createElement("p");
         message.className = "upcoming-empty";
         message.textContent = "No upcoming events in the next 7 days.";
         container.appendChild(message);
+    } else {
+        upcomingEvents.forEach(event => {
+            container.appendChild(createSidebarEventCard(event, false));
+        });
+    }
+
+    // ----- Past section -----
+    container.appendChild(createSidebarSubheading("Past events"));
+
+    if (pastEvents.length === 0) {
+        const message = document.createElement("p");
+        message.className = "upcoming-empty";
+        message.textContent = "No past events.";
+        container.appendChild(message);
         return;
     }
 
-    // Update notification count
-    if (countBadge) {
-        countBadge.textContent = upcomingEvents.length;
-    }
-
-    upcomingEvents.forEach((event) => {
-        const item = document.createElement("div");
-
-        item.className = `
-            group p-3 mb-2
-            bg-surface
-            border border-border
-            border-l-4 border-l-primary
-            rounded-xl
-            shadow-sm
-            hover:shadow-md
-            hover:bg-surface-hover
-            hover:-translate-y-0.5
-            transition-all duration-200
-            cursor-pointer
-        `;
-
-        const title = document.createElement("div");
-
-        title.className = `
-            text-sm font-semibold
-            text-[var(--text)]
-            mb-2
-            break-words
-            group-hover:text-primary
-        `;
-
-        title.textContent = event.title || "Untitled event";
-
-        const time = document.createElement("div");
-
-        time.className = `
-            text-xs
-            text-muted
-            flex items-center gap-2
-        `;
-
-        const startTime = new Date(event.start_time);
-
-        time.textContent = startTime.toLocaleString([], {
-            day: "numeric",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit"
-        });
-
-        item.append(title, time);
-
-        // Make notification clickable
-        item.setAttribute("role", "button");
-        item.tabIndex = 0;
-
-        item.addEventListener("click", () => {
-            showEventDetails(event);
-        });
-
-        item.addEventListener("keydown", (e) => {
-            if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                showEventDetails(event);
-            }
-        });
-
-        container.appendChild(item);
+    pastEvents.slice(0, pastVisibleCount).forEach(event => {
+        container.appendChild(createSidebarEventCard(event, true));
     });
-}
 
+    if (pastEvents.length > pastVisibleCount) {
+        const moreBtn = document.createElement("button");
+        moreBtn.type = "button";
+        moreBtn.className =
+            "w-full min-h-[36px] mt-1 px-3 py-2 bg-surface text-primary text-sm font-medium border border-border rounded-full hover:bg-surface-hover transition-colors";
+        moreBtn.textContent =
+            `Show more (${pastEvents.length - pastVisibleCount} left)`;
+
+        moreBtn.addEventListener("click", () => {
+            pastVisibleCount += 10;
+            renderUpcomingEvents();
+        });
+
+        container.appendChild(moreBtn);
+    }
+}
 // ---------- Registration Dialog Handlers ----------
 
 registerBtn.addEventListener("click", () => {
