@@ -100,6 +100,10 @@ const today = new Date();
 let events = [];
 let activeCalendarId = null;
 
+// Event currently open in the details dialog
+let currentActiveEventId = null;
+let currentActiveEvent = null;
+
 // ---------- Date Helpers ----------
 
 function formatDate(date) {
@@ -981,6 +985,7 @@ createEventBtn.addEventListener("click", () => {
     if (startInput) startInput.value = formatTimeInput(now);
 
     document.getElementById("eventDialogTitle").textContent = "Create Event";
+    document.getElementById("saveEventBtn").textContent = "Save";
 
     if (!eventDialog.open) {
         eventDialog.showModal();
@@ -992,7 +997,8 @@ cancelEventBtn.addEventListener("click", () => {
     eventDialog.close();
 });
 
-// Save a new event
+// Save a new event or update an existing one
+
 eventForm.addEventListener("submit", async (event) => {
     event.preventDefault();
 
@@ -1007,7 +1013,11 @@ eventForm.addEventListener("submit", async (event) => {
     const startTime = document.getElementById("eventStartTime").value;
 
     const eventType = document.getElementById("eventType").value;
-    const calendarId = eventCalendar ? eventCalendar.value : "";
+    const calendarId = document.getElementById("eventCalendar").value;
+
+    // Check whether this is Create or Edit mode
+    const eventId = document.getElementById("eventId").value;
+    const isEditing = Boolean(eventId);
 
     // Validate required fields
     if (!title || !date || !startTime) {
@@ -1015,7 +1025,7 @@ eventForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    // Convert the selected date and start time into a Date object
+    // Convert date and start time
     const start = new Date(`${date}T${startTime}`);
 
     if (Number.isNaN(start.getTime())) {
@@ -1023,12 +1033,13 @@ eventForm.addEventListener("submit", async (event) => {
         return;
     }
 
-    // Automatically set end time to one hour after start time
+    // Automatically set end time one hour after start
     const end = new Date(start.getTime() + 60 * 60 * 1000);
 
     const saveButton = document.getElementById("saveEventBtn");
+
     saveButton.disabled = true;
-    saveButton.textContent = "Saving...";
+    saveButton.textContent = isEditing ? "Updating..." : "Saving...";
 
     try {
         const eventData = {
@@ -1043,22 +1054,40 @@ eventForm.addEventListener("submit", async (event) => {
             eventData.calendar = Number(calendarId);
         }
 
-        await apiRequest("/events/", {
-            method: "POST",
-            body: JSON.stringify(eventData)
-        });
+        // Create or update based on the mode
+        if (isEditing) {
+            await apiRequest(`/events/${eventId}/`, {
+                method: "PATCH",
+                body: JSON.stringify(eventData)
+            });
+        } else {
+            await apiRequest("/events/", {
+                method: "POST",
+                body: JSON.stringify(eventData)
+            });
+        }
 
-        // Close only after the API successfully creates the event
+        // Close form and reset
         eventDialog.close();
         eventForm.reset();
 
+        document.getElementById("eventId").value = "";
+        document.getElementById("eventDialogTitle").textContent = "Create Event";
+
         await loadEvents();
 
-        alert("Event created successfully!");
+        // Reset selected event
+        currentActiveEventId = null;
+        currentActiveEvent = null;
+
+        alert(
+            isEditing
+                ? "Event updated successfully!"
+                : "Event created successfully!"
+        );
 
     } catch (error) {
-        console.error("Error creating event:", error);
-
+        console.error("Error saving event:", error);
         alert(`Could not save the event: ${error.message}`);
 
     } finally {
@@ -1066,6 +1095,7 @@ eventForm.addEventListener("submit", async (event) => {
         saveButton.textContent = "Save";
     }
 });
+
 
 // ---------- Hide End Time Field ----------
 // End time is set automatically (start + 1 hour), so the field is not needed.
@@ -1130,9 +1160,7 @@ if (themeToggleBtn) {
     });
 }
 
-// ---------- Event Details ----------
-
-let currentActiveEventId = null;
+// ---------- Show Event Details ----------
 
 function showEventDetails(event) {
     const dialog = document.getElementById("eventDetailsDialog");
@@ -1143,6 +1171,7 @@ function showEventDetails(event) {
     }
 
     currentActiveEventId = event.id;
+    currentActiveEvent = event;
 
     const start = new Date(event.start_time);
 
@@ -1169,6 +1198,16 @@ function showEventDetails(event) {
             })
             : "Unavailable";
 
+    const end = new Date(event.end_time);
+
+    document.getElementById("detailEnd").textContent =
+        !Number.isNaN(end.getTime())
+            ? end.toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit"
+            })
+            : "Unavailable";
+
     document.getElementById("detailDescription").textContent =
         event.description || "No description provided.";
 
@@ -1177,24 +1216,76 @@ function showEventDetails(event) {
     }
 }
 
+
+// ---------- Event Details Dialog Handler ----------
+
 const eventDetailsDialog = document.getElementById("eventDetailsDialog");
 
 if (eventDetailsDialog) {
-    // Close with the button (works even if the click lands on an icon inside it)
+
     eventDetailsDialog.addEventListener("click", (e) => {
-        // Any button inside the dialog except Delete closes it,
-        // so this works whatever ID the close button has in your HTML
+
         const clickedButton = e.target.closest("button");
 
-        if (clickedButton && clickedButton.id !== "deleteEventBtn") {
+        // Close dialog except when Delete or Edit is clicked
+        if (
+            clickedButton &&
+            clickedButton.id !== "deleteEventBtn" &&
+            clickedButton.id !== "editEventBtn"
+        ) {
             e.preventDefault();
             eventDetailsDialog.close();
             return;
         }
 
-        // Clicking the dark backdrop outside the dialog also closes it
+        // Close when clicking outside the dialog
         if (e.target === eventDetailsDialog) {
             eventDetailsDialog.close();
+        }
+    });
+}
+
+
+// ---------- Edit Event Button ----------
+
+const editEventBtn = document.getElementById("editEventBtn");
+
+if (editEventBtn) {
+    editEventBtn.addEventListener("click", () => {
+        if (!currentActiveEvent) return;
+
+        const ev = currentActiveEvent;
+        const start = new Date(ev.start_time);
+
+        // Fill the form with the existing event
+        document.getElementById("eventId").value = ev.id;
+        document.getElementById("eventTitle").value = ev.title || "";
+        document.getElementById("eventDescription").value = ev.description || "";
+
+        if (!Number.isNaN(start.getTime())) {
+            document.getElementById("eventDate").value = formatDateInput(start);
+            document.getElementById("eventStartTime").value = formatTimeInput(start);
+        }
+
+        const typeInput = document.getElementById("eventType");
+        if (typeInput && ev.event_type) {
+            typeInput.value = ev.event_type;
+        }
+
+        if (eventCalendar && ev.calendar !== undefined && ev.calendar !== null) {
+            eventCalendar.value = String(ev.calendar);
+        }
+
+        document.getElementById("eventDialogTitle").textContent = "Edit Event";
+        document.getElementById("saveEventBtn").textContent = "Update";
+
+        // Swap dialogs
+        if (eventDetailsDialog && eventDetailsDialog.open) {
+            eventDetailsDialog.close();
+        }
+
+        if (!eventDialog.open) {
+            eventDialog.showModal();
         }
     });
 }
@@ -1230,6 +1321,7 @@ if (deleteEventBtn) {
             deleteEventBtn.disabled = false;
             deleteEventBtn.textContent = "Delete";
             currentActiveEventId = null;
+            currentActiveEvent = null;
         }
     });
 }

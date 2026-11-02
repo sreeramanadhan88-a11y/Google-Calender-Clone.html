@@ -181,6 +181,79 @@
         .calendar-event:hover {
             filter: brightness(0.95);
         }
+
+        /* ---------- Mobile (phones) ---------- */
+        @media (max-width: 767px) {
+            /* 16px inputs stop iOS Safari from zooming in on focus */
+            input, select, textarea {
+                font-size: 16px;
+            }
+
+            /* Month: 7 compact columns that fit the screen, no sideways scroll */
+            .month-grid {
+                min-width: 0;
+                grid-template-columns: repeat(7, minmax(0, 1fr));
+            }
+
+            .weekday {
+                padding: 8px 2px;
+                font-size: 11px;
+                letter-spacing: 0.2px;
+            }
+
+            .calendar-day {
+                min-height: 56px;
+                padding: 4px 2px;
+                align-items: center;
+            }
+
+            .day-number {
+                width: 26px;
+                height: 26px;
+                font-size: 14px;
+                margin-bottom: 0;
+            }
+
+            /* Week: one row per day instead of 7 tiny columns */
+            .week-grid {
+                min-width: 0;
+                grid-template-columns: 1fr;
+            }
+
+            .week-day {
+                min-height: 64px;
+                flex-direction: row;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 8px 10px;
+                border-right: none;
+            }
+
+            .week-day .weekday {
+                width: 40px;
+                padding: 4px 0;
+                background: transparent;
+                border-bottom: none;
+                font-size: 12px;
+                text-align: left;
+            }
+
+            .week-day .day-number {
+                flex-shrink: 0;
+                margin-bottom: 0;
+            }
+
+            .week-day .day-events {
+                flex: 1;
+                min-width: 0;
+                max-height: none;
+            }
+
+            .calendar-event {
+                font-size: 12px;
+                padding: 6px 8px;
+            }
+        }
     </style>
 </head>
 <body class="min-h-screen bg-[var(--background)] text-[var(--text)] font-sans leading-normal overflow-x-hidden transition-colors duration-200">
@@ -189,24 +262,25 @@
     <div class="calendar-app flex flex-col min-h-screen">
 
         <!-- Header -->
-        <header class="header sticky top-0 z-[100] min-h-[76px] px-3 md:px-6 py-3 flex items-center justify-between gap-5 bg-surface border-b border-border">
-            <div class="header-left flex items-center gap-3">
+        <header class="header sticky top-0 z-[100] px-3 md:px-6 py-2 md:py-3 flex flex-wrap md:flex-nowrap items-center justify-between gap-2 md:gap-5 bg-surface border-b border-border">
+            <div class="header-left flex items-center gap-2 md:gap-3">
                 <button id="menuBtn" aria-label="Toggle sidebar" class="w-[42px] h-[42px] p-0 inline-flex items-center justify-center border border-transparent rounded-full text-[21px] hover:bg-primary-light transition-colors">☰</button>
-                <h1 class="text-[22px] font-medium tracking-[-0.4px] text-[var(--text)]">Calendar</h1>
+                <h1 class="hidden sm:block text-[20px] md:text-[22px] font-medium tracking-[-0.4px] text-[var(--text)]">Calendar</h1>
             </div>
 
-            <div class="header-center flex items-center gap-3">
-                <button id="todayBtn" class="min-h-[40px] px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all">Today</button>
-                <button id="prevBtn" aria-label="Previous period" class="min-h-[40px] px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all">‹</button>
-                <button id="nextBtn" aria-label="Next period" class="min-h-[40px] px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all">›</button>
-                <h2 id="currentDate" class="min-w-[170px] ml-2 text-[20px] font-normal text-[var(--text)]"></h2>
+            <!-- On phones this sits on its own second row -->
+            <div class="header-center order-3 md:order-none w-full md:w-auto flex items-center gap-2 md:gap-3">
+                <button id="todayBtn" class="min-h-[40px] px-3 md:px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all text-sm md:text-base">Today</button>
+                <button id="prevBtn" aria-label="Previous period" class="min-h-[40px] min-w-[40px] px-3 md:px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all">‹</button>
+                <button id="nextBtn" aria-label="Next period" class="min-h-[40px] min-w-[40px] px-3 md:px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary active:scale-95 transition-all">›</button>
+                <h2 id="currentDate" class="flex-1 md:flex-none min-w-0 md:min-w-[170px] ml-1 md:ml-2 text-right md:text-left text-[15px] md:text-[20px] font-normal text-[var(--text)] truncate"></h2>
             </div>
 
-            <div class="header-right flex items-center gap-3">
+            <div class="header-right flex items-center gap-2 md:gap-3">
                 <!-- Theme Toggle Button -->
                 <button id="themeToggleBtn" aria-label="Toggle dark mode" title="Toggle theme" class="min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover transition-all">🌙</button>
 
-                <select id="viewSelect" aria-label="Calendar view" class="min-h-[40px] max-w-[140px] px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary transition-all outline-none">
+                <select id="viewSelect" aria-label="Calendar view" class="min-h-[40px] max-w-[110px] md:max-w-[140px] px-3 md:px-[14px] py-2 bg-surface text-[var(--text)] border border-border rounded-full hover:bg-surface-hover hover:border-primary transition-all outline-none">
                     <option value="month">Month</option>
                     <option value="week">Week</option>
                     <option value="day">Day</option>
@@ -214,8 +288,9 @@
                 </select>
 
                 <div id="authButtons" class="flex items-center gap-2">
-                    <button id="registerBtn" class="min-h-[40px] px-[14px] py-2 text-primary font-medium border border-border rounded-full hover:bg-primary-light active:scale-95 transition-all">Register</button>
-                    <button id="loginBtn" class="min-h-[40px] px-[14px] py-2 bg-primary text-white font-medium border border-primary rounded-full hover:bg-primary-hover active:scale-95 transition-all">Login</button>
+                    <!-- Hidden on very small screens; the Login dialog has a Register link -->
+                    <button id="registerBtn" class="hidden sm:inline-flex items-center min-h-[40px] px-[14px] py-2 text-primary font-medium border border-border rounded-full hover:bg-primary-light active:scale-95 transition-all">Register</button>
+                    <button id="loginBtn" class="min-h-[40px] px-3 md:px-[14px] py-2 bg-primary text-white font-medium border border-primary rounded-full hover:bg-primary-hover active:scale-95 transition-all text-sm md:text-base">Login</button>
                 </div>
 
                 <div class="profile-container relative" id="profileContainer" hidden>
@@ -229,9 +304,9 @@
                         <span id="profileInitial">U</span>
                     </button>
 
-                    <div class="profile-menu  absolute top-[50px] right-0 w-[240px] p-4 bg-surface border border-border rounded-2xl shadow-lg z-[1000]" id="profileMenu" hidden>
+                    <div class="profile-menu absolute top-[50px] right-0 w-[240px] max-w-[calc(100vw-24px)] p-4 bg-surface border border-border rounded-2xl shadow-lg z-[1000]" id="profileMenu" hidden>
                         <p id="profileName" class="font-semibold text-sm mb-1">User</p>
-                        <p id="profileEmail" class="text-xs text-muted mb-3"></p>
+                        <p id="profileEmail" class="text-xs text-muted mb-3 break-all"></p>
                         <button id="profileLogoutBtn" type="button" class="w-full p-2 bg-surface-hover text-[#b3261e] border border-border rounded-md font-semibold hover:bg-[#fce8e6] transition-colors">Logout</button>
                     </div>
                 </div>
@@ -241,10 +316,10 @@
         </header>
 
         <!-- Main Content -->
-        <div class="main-content flex flex-col md:flex-row flex-1 min-h-[calc(100vh-76px)]">
+        <div class="main-content flex flex-col md:flex-row flex-1">
 
-            <!-- Sidebar -->
-            <aside class="sidebar w-full md:w-[264px] shrink-0 p-6 bg-surface border-b md:border-b-0 md:border-r border-border transition-all duration-250 [&.sidebar-hidden]:hidden" id="sidebar">
+            <!-- Sidebar: slide-over drawer on phones, normal column on desktop -->
+            <aside class="peer sidebar fixed md:static top-0 bottom-0 left-0 z-[200] md:z-auto w-[280px] max-w-[85vw] md:w-[264px] shrink-0 overflow-y-auto md:overflow-visible p-5 md:p-6 bg-surface border-r border-border shadow-lg md:shadow-none transition-all duration-250 [&.sidebar-hidden]:hidden" id="sidebar">
                 <button id="createEventBtn" class="create-event-btn w-full min-h-[52px] mb-7 px-[22px] py-[14px] flex items-center justify-center gap-[10px] bg-primary text-white border border-primary rounded-[14px] text-[15px] font-semibold shadow-sm hover:bg-primary-hover hover:shadow-md hover:-translate-y-[1px] transition-all">
                     + Create
                 </button>
@@ -279,23 +354,28 @@
                 </section>
             </aside>
 
+            <!-- Dark overlay behind the drawer (phones only); tap it to close -->
+            <div id="sidebarOverlay" class="md:hidden fixed inset-0 z-[150] bg-black/40 peer-[.sidebar-hidden]:hidden" aria-hidden="true"></div>
+
             <!-- Calendar Workspace -->
-            <main class="calendar-workspace flex-1 min-w-0 p-3 md:p-6 flex flex-col bg-[var(--background)]">
-                <div class="search-bar flex items-center gap-2 mb-4">
-                <div id="searchResults" class="hidden mt-4 space-y-2"></div>
-                    <input
-                        type="search"
-                        id="searchInput"
-                        placeholder="Search events"
-                        aria-label="Search events"
-                        class="flex-1 min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-full text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
-                    >
-                    <button id="searchBtn" class="min-h-[40px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover hover:border-primary transition-all">Search</button>
+            <main class="calendar-workspace flex-1 min-w-0 p-2 md:p-6 flex flex-col bg-[var(--background)]">
+                <div class="search-bar-wrapper mb-3 md:mb-4">
+                    <div class="search-bar flex items-center gap-2">
+                        <input
+                            type="search"
+                            id="searchInput"
+                            placeholder="Search events"
+                            aria-label="Search events"
+                            class="flex-1 min-w-0 min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-full text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                        >
+                        <button id="searchBtn" class="min-h-[40px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover hover:border-primary transition-all">Search</button>
+                    </div>
+                    <div id="searchResults" class="hidden mt-3 space-y-2"></div>
                 </div>
 
                 <section
                     id="calendarContainer"
-                    class="calendar-container flex-1 min-h-[600px] overflow-auto flex flex-col bg-surface border border-border rounded-xl shadow-sm"
+                    class="calendar-container flex-1 min-h-[420px] md:min-h-[600px] overflow-auto flex flex-col bg-surface border border-border rounded-xl shadow-sm"
                     aria-label="Calendar events"
                 >
                     <!-- Calendar view rendered using JavaScript -->
@@ -305,7 +385,7 @@
     </div>
 
     <!-- Login Dialog -->
-    <dialog id="loginDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
+    <dialog id="loginDialog" class="w-[min(440px,calc(100%-24px))] max-w-[440px] max-h-[90vh] overflow-y-auto m-auto p-5 sm:p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
         <form id="loginForm" class="flex flex-col gap-3">
             <h2 class="mb-4 text-[22px] font-semibold">Login</h2>
 
@@ -315,7 +395,7 @@
                 id="username"
                 autocomplete="username"
                 required
-                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
             >
 
             <label for="password" class="text-muted text-xs font-semibold">Password</label>
@@ -324,7 +404,7 @@
                 id="password"
                 autocomplete="current-password"
                 required
-                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
             >
 
             <p id="loginMessage" role="status" class="text-sm text-[#b3261e]"></p>
@@ -337,14 +417,14 @@
             </p>
 
             <div class="dialog-actions flex justify-end gap-2.5 mt-4">
-                <button type="button" id="cancelLoginBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
-                <button type="submit" class="min-h-[38px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">Login</button>
+                <button type="button" id="cancelLoginBtn" class="min-h-[40px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
+                <button type="submit" class="min-h-[40px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">Login</button>
             </div>
         </form>
     </dialog>
 
     <!-- Registration Dialog -->
-    <dialog id="registerDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
+    <dialog id="registerDialog" class="w-[min(440px,calc(100%-24px))] max-w-[440px] max-h-[90vh] overflow-y-auto m-auto p-5 sm:p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
         <form id="registerForm" class="flex flex-col gap-3">
             <h2 class="mb-4 text-[22px] font-semibold">Create an Account</h2>
 
@@ -354,7 +434,7 @@
                 id="registerUsername"
                 autocomplete="username"
                 required
-                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
             >
 
             <label for="registerEmail" class="text-muted text-xs font-semibold">Email</label>
@@ -363,7 +443,7 @@
                 id="registerEmail"
                 autocomplete="email"
                 required
-                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
             >
 
             <label for="registerPassword" class="text-muted text-xs font-semibold">Password</label>
@@ -372,7 +452,7 @@
                 id="registerPassword"
                 autocomplete="new-password"
                 required
-                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
             >
 
             <label for="confirmPassword" class="text-muted text-xs font-semibold">Confirm password</label>
@@ -381,7 +461,7 @@
                 id="confirmPassword"
                 autocomplete="new-password"
                 required
-                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
             >
 
             <p id="registerMessage" role="status" class="text-sm text-[#b3261e]"></p>
@@ -394,8 +474,8 @@
             </p>
 
             <div class="dialog-actions flex justify-end gap-2.5 mt-4">
-                <button type="button" id="cancelRegisterBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
-                <button type="submit" id="submitRegisterBtn" class="min-h-[38px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">
+                <button type="button" id="cancelRegisterBtn" class="min-h-[40px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
+                <button type="submit" id="submitRegisterBtn" class="min-h-[40px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">
                     Register
                 </button>
             </div>
@@ -403,33 +483,28 @@
     </dialog>
 
     <!-- Event Creation/Editing Dialog -->
-    <dialog id="eventDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
+    <dialog id="eventDialog" class="w-[min(440px,calc(100%-24px))] max-w-[440px] max-h-[90vh] overflow-y-auto m-auto p-5 sm:p-7 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
         <form id="eventForm" class="flex flex-col gap-3">
             <h2 id="eventDialogTitle" class="mb-4 text-[22px] font-semibold">Create Event</h2>
 
             <input type="hidden" id="eventId">
 
             <label for="eventType" class="text-muted text-xs font-semibold">Type</label>
-            <select id="eventType" name="event_type" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
+            <select id="eventType" name="event_type" required class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
                 <option value="event">Event</option>
                 <option value="task">Task</option>
                 <option value="appointment">Appointment</option>
             </select>
-            
-            <div class="mt-4">
-                <label for="eventCalendar" class="block mb-2 text-sm font-medium">
-                    Calendar
-                </label>
 
-                <select
-                    id="eventCalendar"
-                    name="calendar"
-                    required
-                    class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
-                >
-                    <option value="">Select a calendar</option>
-                </select>
-            </div>
+            <label for="eventCalendar" class="text-muted text-xs font-semibold">Calendar</label>
+            <select
+                id="eventCalendar"
+                name="calendar"
+                required
+                class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+            >
+                <option value="">Select a calendar</option>
+            </select>
 
             <label for="eventTitle" class="text-muted text-xs font-semibold">Title</label>
             <input
@@ -437,62 +512,54 @@
                 id="eventTitle"
                 placeholder="Enter title"
                 required
-                class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
+                class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"
             >
 
             <label for="eventDate" class="text-muted text-xs font-semibold">Date</label>
-            <input type="date" id="eventDate" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
+            <input type="date" id="eventDate" required class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
 
-            <div class="event-time-inputs grid grid-cols-2 gap-3">
-                <div>
-                    <label for="eventStartTime" class="text-muted text-xs font-semibold block mb-1">Start Time</label>
-                    <input type="time" id="eventStartTime" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
-                </div>
-
-                <!-- <div>
-                    <label for="eventEndTime" class="text-muted text-xs font-semibold block mb-1">End Time</label>
-                    <!-- <input type="time" id="eventEndTime" required class="w-full min-h-[40px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light"> -->
-                </div> 
-            </div>
+            <!-- End time is set automatically (start + 1 hour) -->
+            <label for="eventStartTime" class="text-muted text-xs font-semibold">Start Time</label>
+            <input type="time" id="eventStartTime" required class="w-full min-h-[44px] px-3 py-2 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light">
 
             <label for="eventDescription" class="text-muted text-xs font-semibold mt-1">Description</label>
-            <textarea id="eventDescription" class="w-full min-h-[80px] p-3 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light resize-vertical"></textarea>
+            <textarea id="eventDescription" class="w-full min-h-[80px] p-3 bg-surface text-[var(--text)] border border-border rounded-lg outline-none focus:border-primary focus:ring-2 focus:ring-primary-light resize-y"></textarea>
 
             <div class="dialog-actions flex justify-end gap-2.5 mt-4">
-                <button type="button" id="cancelEventBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
-                <button type="submit" id="saveEventBtn" class="min-h-[38px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">Save</button>
+                <button type="button" id="cancelEventBtn" class="min-h-[40px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">Cancel</button>
+                <button type="submit" id="saveEventBtn" class="min-h-[40px] px-4 py-2 bg-primary text-white border border-primary rounded-full font-medium hover:bg-primary-hover transition-colors">Save</button>
             </div>
         </form>
     </dialog>
 
     <!-- Event Details Dialog -->
-    <dialog id="eventDetailsDialog" class="w-[min(440px,calc(100%-32px))] max-w-[440px] m-auto p-6 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
+    <dialog id="eventDetailsDialog" class="w-[min(440px,calc(100%-24px))] max-w-[440px] max-h-[90vh] overflow-y-auto m-auto p-5 sm:p-6 bg-surface text-[var(--text)] border border-border rounded-[20px] shadow-lg">
         <div class="event-details-content">
             <h2 class="text-[22px] font-semibold mb-5">Event Details</h2>
 
             <div class="event-detail-row flex justify-between gap-4 mb-3.5">
                 <strong class="shrink-0 text-muted text-sm">Title</strong>
-                <span id="detailTitle" class="text-right font-medium break-words"></span>
+                <span id="detailTitle" class="text-right font-medium break-words min-w-0"></span>
             </div>
 
             <div class="event-detail-row flex justify-between gap-4 mb-3.5">
                 <strong class="shrink-0 text-muted text-sm">Type</strong>
-                <span id="detailType" class="text-right font-medium break-words"></span>
+                <span id="detailType" class="text-right font-medium break-words min-w-0"></span>
             </div>
 
             <div class="event-detail-row flex justify-between gap-4 mb-3.5">
                 <strong class="shrink-0 text-muted text-sm">Date</strong>
-                <span id="detailDate" class="text-right font-medium gap-4 mb-3.5 break-words"></span>
+                <span id="detailDate" class="text-right font-medium break-words min-w-0"></span>
             </div>
 
             <div class="event-detail-row flex justify-between gap-4 mb-3.5">
                 <strong class="shrink-0 text-muted text-sm">Start Time</strong>
-                <span id="detailStart" class="text-right font-medium break-words"></span>
+                <span id="detailStart" class="text-right font-medium break-words min-w-0"></span>
             </div>
 
-            <div class="event-detail-row flex jurisdiction gap-4 mb-3.5">
+            <div class="event-detail-row flex justify-between gap-4 mb-3.5">
                 <strong class="shrink-0 text-muted text-sm">End Time</strong>
-                <span id="detailEnd" class="text-right font-medium break-words"></span>
+                <span id="detailEnd" class="text-right font-medium break-words min-w-0"></span>
             </div>
 
             <div class="event-detail-description mt-5">
@@ -500,17 +567,59 @@
                 <p id="detailDescription" class="whitespace-pre-wrap break-words text-sm text-[var(--text)]">No description provided.</p>
             </div>
 
-            <!-- Single unified action bar with Delete on the left and Close on the right -->
-            <div class="dialog-actions flex justify-between items-center mt-6">
-                <button type="button" id="deleteEventBtn" class="min-h-[38px] px-4 py-2 bg-[#fce8e6] text-[#b3261e] border border-[#fadcda] rounded-full font-medium hover:bg-[#fbd4d1] transition-colors">
+            <!-- Event action buttons -->
+            <div class="dialog-actions flex flex-wrap justify-between items-center gap-2 mt-6">
+                <button
+                    type="button"
+                    id="deleteEventBtn"
+                    class="min-h-[40px] px-4 py-2 bg-[#fce8e6] text-[#b3261e] border border-[#fadcda] rounded-full font-medium hover:bg-[#fbd4d1] transition-colors">
                     Delete
                 </button>
-                <button type="button" id="closeEventDetailsDialogBtn" class="min-h-[38px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">
-                    Close
-                </button>
+
+                <div class="flex items-center gap-2">
+                    <button
+                        type="button"
+                        id="editEventBtn"
+                        class="min-h-[40px] px-4 py-2 bg-primary text-white rounded-full font-medium hover:opacity-90 transition-colors">
+                        Edit
+                    </button>
+
+                    <button
+                        type="button"
+                        id="closeEventDetailsDialogBtn"
+                        class="min-h-[40px] px-4 py-2 bg-surface text-[var(--text)] border border-border rounded-full font-medium hover:bg-surface-hover transition-colors">
+                        Close
+                    </button>
+                </div>
             </div>
         </div>
     </dialog>
+
+    <!-- Mobile sidebar behaviour: start closed on phones, close on overlay tap or selection -->
+    <script>
+        (function () {
+            const sidebar = document.getElementById("sidebar");
+            const overlay = document.getElementById("sidebarOverlay");
+            const isMobile = () => window.matchMedia("(max-width: 767px)").matches;
+
+            if (isMobile()) {
+                sidebar.classList.add("sidebar-hidden");
+            }
+
+            overlay.addEventListener("click", () => {
+                sidebar.classList.add("sidebar-hidden");
+            });
+
+            sidebar.addEventListener("click", (e) => {
+                if (
+                    isMobile() &&
+                    e.target.closest(".calendar-item, #createEventBtn, #upcomingEvents > div")
+                ) {
+                    sidebar.classList.add("sidebar-hidden");
+                }
+            });
+        })();
+    </script>
 
     <!-- JavaScript Link Included Here -->
     <script src="script.js" defer></script>
